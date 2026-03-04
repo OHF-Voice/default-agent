@@ -1,8 +1,11 @@
 import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
-from hassil import Intents
+import yaml
+from hassil import Intents, merge_dict
 from home_assistant_intents import get_intents, get_languages
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,10 +23,25 @@ class LanguageIntents:
 
 
 class IntentsLoader:
-    # TODO: custom intents dir
-    def __init__(self) -> None:
+    def __init__(
+        self, custom_sentences_dirs: Optional[Iterable[Union[str, Path]]] = None
+    ) -> None:
         self.lang_intents: Dict[str, LanguageIntents] = {}
         self.lang_map: Dict[str, str] = {lang: lang for lang in get_languages()}
+
+        if custom_sentences_dirs is not None:
+            self.custom_sentences_dirs = [Path(p) for p in custom_sentences_dirs]
+        else:
+            self.custom_sentences_dirs = []
+
+        # Get supported languages from custom sentences
+        for sentences_dir in self.custom_sentences_dirs:
+            for lang_dir in sentences_dir.iterdir():
+                if not lang_dir.is_dir():
+                    continue
+
+                lang = lang_dir.name
+                self.lang_map.setdefault(lang, lang)
 
     def get_intents(self, language: str) -> Optional[LanguageIntents]:
         lang_intents = self.lang_intents.get(language)
@@ -63,7 +81,7 @@ class IntentsLoader:
         self, language: str, original_language: Optional[str] = None
     ) -> Optional[LanguageIntents]:
         intents_dict = get_intents(language)
-        if not intents_dict:
+        if (not intents_dict) and (language not in self.lang_map):
             # Language isn't supported
             _LOGGER.debug("Language isn't supported: %s", original_language or language)
             return None
@@ -71,6 +89,21 @@ class IntentsLoader:
         _LOGGER.debug(
             "Loading intents for %s (requested=%s)", language, original_language
         )
+
+        intents_dict = intents_dict or {}
+        for sentences_dir in self.custom_sentences_dirs:
+            for sentences_lang_dir in sentences_dir.iterdir():
+                if not sentences_lang_dir.is_dir():
+                    continue
+
+                sentences_lang = sentences_lang_dir.name
+                if sentences_lang != language:
+                    continue
+
+                for sentences_path in sentences_lang_dir.glob("*.yaml"):
+                    _LOGGER.debug("Loading custom sentences file: %s", sentences_path)
+                    with open(sentences_path, "r", encoding="utf-8") as sentences_file:
+                        merge_dict(intents_dict, yaml.safe_load(sentences_file))
 
         responses_dict = intents_dict.get("responses", {})
 

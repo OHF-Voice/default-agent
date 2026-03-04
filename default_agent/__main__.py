@@ -35,6 +35,11 @@ async def main() -> None:
     )
     parser.add_argument("--uri", default="stdio://", help="unix:// or tcp://")
     parser.add_argument(
+        "--custom-sentences",
+        action="append",
+        help="Directory with <language>/<sentences.yaml> files",
+    )
+    parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to log"
     )
     args = parser.parse_args()
@@ -43,7 +48,7 @@ async def main() -> None:
     _LOGGER.debug(args)
 
     hass = HomeAssistant(token=args.hass_token, api_url=args.hass_api)
-    loader = IntentsLoader()
+    loader = IntentsLoader(custom_sentences_dirs=args.custom_sentences)
 
     server = AsyncServer.from_uri(args.uri)
     print("Ready")

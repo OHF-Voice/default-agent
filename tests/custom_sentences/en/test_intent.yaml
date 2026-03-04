@@ -1,0 +1,19 @@
+language: "en"
+
+lists:
+  number:
+    range:
+      from: 1
+      to: 10
+
+intents:
+  TestIntent:
+    data:
+      - sentences:
+          - "this is test {number}"
+        response: "test_response"
+
+responses:
+  TestIntent:
+    test_response: |
+      Running test {slots.number}
