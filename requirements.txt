@@ -1,0 +1,5 @@
+wyoming
+aiohttp
+home-assistant-intents
+hassil
+jinja2
