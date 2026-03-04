@@ -1,15 +1,14 @@
-import logging
 import itertools
-from datetime import datetime, time
-from typing import Any, Dict, Optional
-from enum import Enum
-from dataclasses import dataclass
+import logging
 from collections.abc import Collection
-from typing import Any, Dict, Tuple
+from dataclasses import dataclass
+from datetime import datetime, time
+from enum import Enum
+from typing import Any, Dict, Optional, Tuple
 
-from hassil import recognize_best, RecognizeResult
+from hassil import RecognizeResult, recognize_best
 from home_assistant_intents import ErrorKey
-from jinja2 import Environment, BaseLoader, StrictUndefined
+from jinja2 import BaseLoader, Environment, StrictUndefined
 
 from .hass_api import HomeAssistant, InfoForRecognition
 from .intents_loader import LanguageIntents

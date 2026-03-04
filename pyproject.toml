@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=62.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name        = "default-agent"
+version     = "0.1.0"
+license     = {text = "Apache-2.0"}
+description = "An external default conversation agent for Home Assistant"
+readme      = "README.md"
+authors     = [
+    {name = "The Home Assistant Authors", email = "hello@home-assistant.io"}
+]
+requires-python = ">=3.9"
+dependencies = [
+    "aiohttp==3.13.3",
+    "home-assistant-intents==2026.2.13",
+    "hassil==3.5.0",
+    "Jinja2==3.1.6",
+    "wyoming==1.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black==25.11.0",
+    "flake8==7.3.0",
+    "mypy==1.19.0",
+    "pylint==4.0.2",
+    "pytest==8.4.2",
+]
+
+[project.urls]
+"Source Code" = "https://github.com/OHF-Voice/default-agent"
+
+[tool.mypy]
+pretty = true
+
+[[tool.mypy.overrides]]
+module = [
+    "home_assistant_intents.*",
+]
+ignore_missing_imports = true
+
+[tool.setuptools]
+platforms = ["any"]
+zip-safe  = true
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["default_agent"]
+exclude = ["tests", "tests.*"]
+
+

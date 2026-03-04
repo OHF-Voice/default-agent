@@ -1,16 +1,12 @@
-import asyncio
 import argparse
+import asyncio
 import logging
-import itertools
-from dataclasses import dataclass
-from datetime import datetime, time
-from typing import Any, Dict, List, Optional
 from functools import partial
 from importlib.metadata import version
+from typing import Optional
 
-from jinja2 import Environment, BaseLoader, StrictUndefined
-from hassil import Intents, RecognizeResult, recognize_best
-from home_assistant_intents import get_intents, get_languages, ErrorKey
+from home_assistant_intents import get_languages
+from jinja2 import BaseLoader, Environment, StrictUndefined
 from wyoming.asr import Transcript
 from wyoming.event import Event
 from wyoming.handle import Handled, NotHandled

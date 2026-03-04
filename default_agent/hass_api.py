@@ -1,18 +1,19 @@
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, List, Set
+from typing import Any, Dict, Optional, Set
 
 from aiohttp import ClientSession
-
 from hassil import RecognizeResult
-from hassil.intents import TextSlotList, SlotList, TextSlotValue
 from hassil.expression import TextChunk
+from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
 _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
 class InfoForRecognition:
+    """Information gathered from Home Assistant for intent recognition."""
+
     slot_lists: Dict[str, SlotList]
     preferred_area_id: Optional[str]
     preferred_area_name: Optional[str]
@@ -21,6 +22,8 @@ class InfoForRecognition:
 
 
 class HomeAssistant:
+    """API to Home Assistant."""
+
     def __init__(
         self,
         token: str,
@@ -36,6 +39,7 @@ class HomeAssistant:
     async def get_info(
         self, device_id: Optional[str] = None, satellite_id: Optional[str] = None
     ) -> InfoForRecognition:
+        """Get necessary information for intent recognition."""
         current_id = 0
 
         def next_id() -> int:
@@ -225,11 +229,13 @@ class HomeAssistant:
         self,
         result: RecognizeResult,
         language: str,
+        *,
         device_id: Optional[str] = None,
         satellite_id: Optional[str] = None,
         assistant: Optional[str] = "conversation",
         extra_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
+        """Handle intent with REST API and return response."""
         headers = {"Authorization": f"Bearer {self.token}"}
         data = {e.name: e.value for e in result.entities_list}
         if extra_data:
@@ -256,6 +262,7 @@ class HomeAssistant:
     async def render_template(
         self, template: str, variables: Optional[Dict[str, Any]] = None
     ) -> Any:
+        """Render a jinja2 template in Home Assistant."""
         current_id = 0
 
         def next_id() -> int:
