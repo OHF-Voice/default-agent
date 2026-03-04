@@ -13,6 +13,7 @@ authors     = [
 ]
 requires-python = ">=3.9"
 dependencies = [
+    "PyYAML>=6,<7",
     "aiohttp==3.13.3",
     "home-assistant-intents==2026.2.13",
     "hassil==3.5.0",
