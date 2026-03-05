@@ -108,6 +108,18 @@ class EventHandler(AsyncEventHandler):
             lang = transcript.language or "en"
             text = transcript.text or ""
 
+            # The device/satellite ids are used to determine which area to
+            # target for commands like "turn on the lights" that don't name an
+            # area explicitly.
+            #
+            # In YAML, these commands look like:
+            # - sentences:
+            #     - "turn on [the] lights"
+            #   slots:
+            #     domain: "light"
+            #   requires_context:  <--- required
+            #     area:
+            #       slot: true
             device_id: Optional[str] = None
             satellite_id: Optional[str] = None
             if transcript.context:
@@ -134,6 +146,11 @@ class EventHandler(AsyncEventHandler):
                 )
                 return True
 
+            # Try to load intents for the requested language.
+            #
+            # We try the full language code first, like "en_US". If there are no
+            # intents, then the language family is tried instead ("en" in this
+            # example).
             lang_intents = self.loader.get_intents(lang)
             if lang_intents is None:
                 _LOGGER.debug("No intents for language: %s", lang)
@@ -145,6 +162,10 @@ class EventHandler(AsyncEventHandler):
                 )
                 return True
 
+            # 1. Recognize the intent
+            # 2. If recognized, handle in Home Assistant via /api/intent/handle
+            # 3. Use the result from Home Assistant and response template to
+            #    generate a text response
             is_handled, response_text = await async_converse(
                 self.hass,
                 text,
@@ -154,10 +175,12 @@ class EventHandler(AsyncEventHandler):
             )
 
             if is_handled:
+                # Success, return resopnse
                 await self.write_event(
                     Handled(text=response_text, context=transcript.context).event()
                 )
             else:
+                # Failure, return error
                 await self.write_event(
                     NotHandled(text=response_text, context=transcript.context).event()
                 )
