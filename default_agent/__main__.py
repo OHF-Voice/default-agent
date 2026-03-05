@@ -48,6 +48,16 @@ async def main() -> None:
         action="store_true",
         help="Don't load intents from home-assistant-intents package",
     )
+    #
+    parser.add_argument(
+        "--device-id",
+        help="Default satellite device id when not provided by Home Assistant (for debugging)",
+    )
+    parser.add_argument(
+        "--satellite-id",
+        help="Default satellite entity id when not provided by Home Assistant (for debugging)",
+    )
+    #
     parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to log"
     )
@@ -104,11 +114,8 @@ class EventHandler(AsyncEventHandler):
                 device_id = transcript.context.get("device_id")
                 satellite_id = transcript.context.get("satellite_id")
 
-            # DEBUG
-            device_id = "0419d58f1f161dfe9e327a2ed9c9f47e"
-            satellite_id = (
-                "assist_satellite.home_assistant_voice_090087_assist_satellite"
-            )
+            device_id = device_id or self.args.device_id
+            satellite_id = satellite_id or self.args.satellite_id
 
             _LOGGER.debug(
                 "Processing transcript with language '%s': %s (device_id=%s, satellite_id=%s)",
