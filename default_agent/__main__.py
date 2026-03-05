@@ -198,7 +198,7 @@ class EventHandler(AsyncEventHandler):
                                 name="OHF Voice", url="https://github.com/OHF-Voice"
                             ),
                             installed=True,
-                            version="0.0.1",
+                            version=version("default_agent"),
                             models=[
                                 HandleModel(
                                     name="default-agent",
@@ -208,8 +208,12 @@ class EventHandler(AsyncEventHandler):
                                         url="https://github.com/OHF-Voice",
                                     ),
                                     installed=True,
-                                    version=version("home_assistant_intents"),
-                                    languages=get_languages(),
+                                    version=(
+                                        version("home_assistant_intents")
+                                        if self.loader.load_builtin_intents
+                                        else "dev"
+                                    ),
+                                    languages=self.loader.supported_languages(),
                                 )
                             ],
                         )

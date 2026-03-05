@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from hassil import Intents, merge_dict
@@ -153,6 +153,9 @@ class IntentsLoader:
             self.lang_intents[original_language] = lang_intents
 
         return lang_intents
+
+    def supported_languages(self) -> List[str]:
+        return sorted(self.lang_map.keys())
 
     def _find_supported_languages(self) -> None:
         """Search intents package and directories for supported languages."""
