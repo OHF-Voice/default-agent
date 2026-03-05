@@ -88,7 +88,7 @@ async def async_converse(
 
     # Recognize intent
     _LOGGER.debug(
-        "Recognizing intent for text (language=%s): %s", text, lang_intents.language
+        "Recognizing intent for text (language=%s): %s", lang_intents.language, text
     )
     result = recognize_best(
         text,
@@ -102,8 +102,8 @@ async def async_converse(
         # TODO: re-run with unmatched entities?
         _LOGGER.debug(
             "No intent recognized for text (language=%s): %s",
-            text,
             lang_intents.language,
+            text,
         )
         return (False, render_error(lang_intents, ErrorKey.NO_INTENT))
 

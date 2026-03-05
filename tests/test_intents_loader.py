@@ -11,15 +11,15 @@ from default_agent.intents_loader import IntentsLoader
 _TESTS_DIR = Path(__file__).parent
 
 
-@pytest.fixture
-def intents_loader_fixture(name="intents_loader", scope="session") -> IntentsLoader:
+@pytest.fixture(name="intents_loader", scope="session")
+def intents_loader_fixture() -> IntentsLoader:
     """Intents loader with custom sentences."""
     custom_sentences_dir = _TESTS_DIR / "custom_sentences"
     return IntentsLoader(custom_sentences_dirs=[custom_sentences_dir])
 
 
-@pytest.fixture
-def slot_lists_fixture(name="slot_lists", scope="session") -> Dict[str, SlotList]:
+@pytest.fixture(name="slot_lists", scope="session")
+def slot_lists_fixture() -> Dict[str, SlotList]:
     """Empty name/area/floor slot lists for built-in templates."""
     return {
         "name": TextSlotList(name="name", values=[]),

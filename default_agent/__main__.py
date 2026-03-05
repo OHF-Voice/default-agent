@@ -40,6 +40,15 @@ async def main() -> None:
         help="Directory with <language>/<sentences.yaml> files",
     )
     parser.add_argument(
+        "--intents-repo",
+        help="Path to intents repository directory (implies --no-builtin-intents)",
+    )
+    parser.add_argument(
+        "--no-builtin-intents",
+        action="store_true",
+        help="Don't load intents from home-assistant-intents package",
+    )
+    parser.add_argument(
         "--debug", action="store_true", help="Print DEBUG messages to log"
     )
     args = parser.parse_args()
@@ -48,7 +57,11 @@ async def main() -> None:
     _LOGGER.debug(args)
 
     hass = HomeAssistant(token=args.hass_token, api_url=args.hass_api)
-    loader = IntentsLoader(custom_sentences_dirs=args.custom_sentences)
+    loader = IntentsLoader(
+        custom_sentences_dirs=args.custom_sentences,
+        intents_repo_dir=args.intents_repo,
+        load_builtin_intents=(not args.no_builtin_intents),
+    )
 
     server = AsyncServer.from_uri(args.uri)
     print("Ready")
