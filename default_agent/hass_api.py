@@ -1,3 +1,5 @@
+"""Wrapper for Home Assistant REST/Websocket API."""
+
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
@@ -183,8 +185,9 @@ class HomeAssistant:
                     device_info["id"]: device_info for device_info in msg["result"]
                 }
 
-                # Get preferred area/floor
+                # Get preferred area
                 if satellite_id:
+                    # Get area of assist_satellite entity
                     await websocket.send_json(
                         {
                             "id": next_id(),
@@ -199,14 +202,15 @@ class HomeAssistant:
                     if satellite_area_id:
                         preferred_area_id = satellite_area_id
                     else:
+                        # Use device area
                         satellite_device_id = satellite_info.get("device_id")
                         if satellite_device_id:
                             preferred_area_id = devices.get(
                                 satellite_device_id, {}
                             ).get("area_id")
                 elif device_id:
-                    # TODO
-                    pass
+                    # Get area from device instead
+                    preferred_area_id = devices.get(device_id, {}).get("area_id")
 
                 if preferred_area_id:
                     preferred_area_info = areas.get(preferred_area_id, {})
@@ -258,53 +262,3 @@ class HomeAssistant:
             )
             assert web_response.status == 200
             return await web_response.json()
-
-    async def render_template(
-        self, template: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Any:
-        """Render a jinja2 template in Home Assistant."""
-        current_id = 0
-
-        def next_id() -> int:
-            nonlocal current_id
-            current_id += 1
-            return current_id
-
-        async with ClientSession() as session:
-            async with session.ws_connect(
-                self.websocket_api_url, max_msg_size=0
-            ) as websocket:
-                # Authenticate
-                msg = await websocket.receive_json()
-                assert msg["type"] == "auth_required", msg
-
-                await websocket.send_json(
-                    {
-                        "type": "auth",
-                        "access_token": self.token,
-                    },
-                )
-
-                msg = await websocket.receive_json()
-                assert msg["type"] == "auth_ok", msg
-
-                await websocket.send_json(
-                    {
-                        "id": next_id(),
-                        "type": "render_template",
-                        "template": template,
-                        "variables": variables or {},
-                        "report_errors": True,
-                    },
-                )
-                msg = await websocket.receive_json()
-                if msg["type"] == "event":
-                    return msg["event"]["error"]
-
-                assert msg["type"] == "result"
-                assert msg["success"], msg
-
-                msg = await websocket.receive_json()
-                assert msg["type"] == "event"
-
-                return msg["event"]["result"]

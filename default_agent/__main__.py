@@ -1,3 +1,5 @@
+"""Wyoming conversation agent."""
+
 import argparse
 import asyncio
 import logging
@@ -5,8 +7,6 @@ from functools import partial
 from importlib.metadata import version
 from typing import Optional
 
-from home_assistant_intents import get_languages
-from jinja2 import BaseLoader, Environment, StrictUndefined
 from wyoming.asr import Transcript
 from wyoming.event import Event
 from wyoming.handle import Handled, NotHandled
@@ -92,7 +92,6 @@ class EventHandler(AsyncEventHandler):
         self.hass = hass
         self.loader = loader
         self.args = cli_args
-        self.env = Environment(loader=BaseLoader(), undefined=StrictUndefined)
 
     async def handle_event(self, event: Event) -> bool:
         try:
@@ -188,6 +187,7 @@ class EventHandler(AsyncEventHandler):
             return True
 
         if Describe.is_type(event.type):
+            # Send information about the conversation agent to Home Assistant.
             await self.write_event(
                 Info(
                     handle=[

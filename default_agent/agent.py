@@ -1,3 +1,5 @@
+"""Default agent implementation."""
+
 import itertools
 import logging
 from collections.abc import Collection
@@ -20,20 +22,54 @@ _ENV = Environment(loader=BaseLoader(), undefined=StrictUndefined)
 
 
 class MatchFailedReason(str, Enum):
-    DOMAIN = "DOMAIN"
-    DEVICE_CLASS = "DEVICE_CLASS"
-    STATE = "STATE"
-    FEATURE = "FEATURE"
-    ASSISTANT = "ASSISTANT"
+    """Possible reasons for match failure.
+
+    Must align with homeassistant.helpers.intent.MatchFailedReason
+    """
+
+    NAME = "NAME"
+    """No entities matched name constraint."""
+
     AREA = "AREA"
-    DUPLICATE_NAME = "DUPLICATE_NAME"
+    """No entities matched area constraint."""
+
+    FLOOR = "FLOOR"
+    """No entities matched floor constraint."""
+
+    DOMAIN = "DOMAIN"
+    """No entities matched domain constraint."""
+
+    DEVICE_CLASS = "DEVICE_CLASS"
+    """No entities matched device class constraint."""
+
+    FEATURE = "FEATURE"
+    """No entities matched supported features constraint."""
+
+    STATE = "STATE"
+    """No entities matched required states constraint."""
+
+    ASSISTANT = "ASSISTANT"
+    """No entities matched exposed to assistant constraint."""
+
     INVALID_AREA = "INVALID_AREA"
+    """Area name from constraint does not exist."""
+
     INVALID_FLOOR = "INVALID_FLOOR"
+    """Floor name from constraint does not exist."""
+
+    DUPLICATE_NAME = "DUPLICATE_NAME"
+    """Two or more entities matched the same name constraint and could not be disambiguated."""
+
+    MULTIPLE_TARGETS = "MULTIPLE_TARGETS"
+    """Two or more entities matched when a single target is required."""
 
 
 @dataclass
 class MatchTargetsConstraints:
-    """Constraints for async_match_targets."""
+    """Constraints for async_match_targets.
+
+    Used here to determine error message.
+    """
 
     name: str | None = None
     """Entity name or alias."""
@@ -73,8 +109,18 @@ async def async_converse(
     device_id: Optional[str] = None,
     satellite_id: Optional[str] = None,
 ) -> Tuple[bool, str]:
-    """Returns (success, message)."""
+    """
+    Tries to recognize intent from text and handle intent.
+
+    If successful, returns (True, response).
+    Otherwise, returns (False, error)."""
+
     # Get exposed entities, etc.
+    #
+    # We load these each time to avoid subscribing to state changes over the
+    # websocket API.
+    # This will be slower with many exposed entities, but this agent is intended
+    # to run in a Home Assistant app/add-on with virtually no latency.
     _LOGGER.debug("Loading entities from Home Assistant")
     hass_info = await hass.get_info(device_id=device_id, satellite_id=satellite_id)
 
@@ -97,7 +143,7 @@ async def async_converse(
         intent_context=intent_context,
         language=lang_intents.language,
         best_slot_name="name",
-    )
+    )  # TODO: prefer custom sentences with "best_metadata_key"
     if result is None:
         # TODO: re-run with unmatched entities?
         _LOGGER.debug(
@@ -115,6 +161,7 @@ async def async_converse(
     if hass_info.preferred_floor_id:
         extra_data["preferred_floor_id"] = hass_info.preferred_floor_id
 
+    # /api/intent/handle
     intent_response = await hass.handle_intent(
         result,
         language=lang_intents.language,
@@ -128,6 +175,7 @@ async def async_converse(
         # Intent failed in Home Assistant
         return (False, get_intent_response_error(lang_intents, intent_response))
 
+    # Check if intent handler in Home Assistant produced a response
     speech = (
         intent_response.get("speech", {}).get("plain", {}).get("speech", "").strip()
     )
@@ -145,12 +193,18 @@ def render_response(
     lang_intents: LanguageIntents,
     info: InfoForRecognition,
 ) -> str:
+    """Render the response Jinja2 template for the intent.
+
+    This is done locally rather than in Home Assistant, so we need to patch
+    things to keep the Jinja2 environment compatible with existing response
+    templates.
+    """
     # result.response is a key into the intent's response templates
     response_template = lang_intents.intent_responses.get(result.intent.name, {}).get(
         result.response
     )
     if not response_template:
-        # No response
+        # No response template
         return ""
 
     slots: Dict[str, Any] = {e.name: e.value for e in result.entities_list}
@@ -165,11 +219,12 @@ def render_response(
 
     # Patch for specific intents.
     #
-    # We do this because the "speech slot" values were transformed into JSON
-    # from HA, but the response templates assume the original objects exist.
+    # We do this because the "speech slot" values set by the intent handler in
+    # Home Assistant were transformed into JSON via the REST API, but the
+    # response templates assume the original objects exist.
     #
-    # For example, "HassGetCurrentTime" assumes a `datetime` object, but we get
-    # back an ISO time string.
+    # For example, "HassGetCurrentTime" assumes a Python datetime object in
+    # slots.time, but we get back an ISO time string from the REST API.
     intent_response_data = intent_response.get("data", {})
     if result.intent.name == "HassGetCurrentTime":
         # ISO -> time
@@ -182,6 +237,11 @@ def render_response(
         if isinstance(date_str, str):
             slots["date"] = datetime.fromisoformat(date_str)
 
+    # The "query" field is mainly used by HassGetState to tell which entities
+    # matched the question.
+    #
+    # If the users asks "is the bedroom light on", its state will show up in
+    # "matched" if it's state is "on" and in "unmatched" if it's not.
     query = intent_response_data.get("query", {})
     matched = query.get("matched", [])
     unmatched = query.get("unmatched", [])
@@ -197,8 +257,12 @@ def render_response(
 
     variables["query"] = query
     if first_state is not None:
+        # The first matched or unmatched entity is available as "state".
         variables["state"] = first_state
 
+    # TODO: We're using StrictUndefined for Jinja2 rendering right now.
+    # We may want to consider making undefined objects "falsey" like Home
+    # Assistant does.
     _LOGGER.debug(
         "Rendering response '%s' with variables %s: %s",
         result.response,
@@ -216,6 +280,10 @@ def render_response(
 def render_error(
     lang_intents: LanguageIntents, key: ErrorKey, data: Optional[Dict[str, Any]] = None
 ) -> str:
+    """Render a Jinja2 template for a pre-defined error.
+
+    These are found in the language's sentences/_common.yaml file.
+    """
     error_template = lang_intents.error_responses.get(key.value)
     if not error_template:
         return _DEFAULT_ERROR_TEXT
@@ -234,6 +302,7 @@ def render_error(
 def get_intent_response_error(
     lang_intents: LanguageIntents, intent_response: Dict[str, Any]
 ) -> str:
+    """Return the error text for a match failure."""
     error_text = (
         intent_response.get("speech", {}).get("plain", {}).get("speech", "")
     ).strip()
@@ -256,7 +325,31 @@ def get_intent_response_error(
 def get_match_error_response(
     match_error: Dict[str, Any],
 ) -> Tuple[ErrorKey, Dict[str, Any]]:
-    """Return key and template arguments for error when target matching fails."""
+    """Return key and template arguments for error when target matching fails.
+
+    Unfortunately, the error information is not always precise enough to know
+    exactly what went wrong. This is due to how async_match_targets works in
+    Home Assistant to find entities by name given certain constraints.
+
+    For example, say we have two exposed media players in Home Assistant:
+    - Media player 1 is in the current area but doesn't support NEXT_TRACK
+    - Media player 2 is in a different area and supports NEXT_TRACK
+
+    If we give the command "next track", this implies two constraints:
+    1. The media player must support NEXT_TRACK
+    2. The media player must be in the current area
+    3. The media player must be in the "playing" state
+
+    Assuming both media players are "playing", async_match_targets will:
+    1. Begin with two candidates: media player 1 and media player 2
+    2. Eliminate media player 2 because it doesn't support the required feature
+    3. Check if media player 2 is in the current area
+    4. Fail with the "AREA" MatchFailedReason
+
+    When figuring out the error message, we don't have enough information to
+    know that the real problem is media player 1 doesn't supported NEXT_TRACK
+    because we only see why the *last* candidate was eliminated.
+    """
 
     constraints = MatchTargetsConstraints(**match_error["constraints"])
     reason = MatchFailedReason(match_error["no_match_reason"])
