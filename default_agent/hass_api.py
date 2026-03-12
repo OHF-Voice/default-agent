@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
 
-from aiohttp import ClientSession
+import aiohttp
 from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
@@ -57,7 +57,7 @@ class HomeAssistant:
         preferred_area_name: Optional[str] = None
         preferred_floor_id: Optional[str] = None
 
-        async with ClientSession() as session:
+        async with aiohttp.ClientSession() as session:
             async with session.ws_connect(
                 self.websocket_api_url, max_msg_size=0
             ) as websocket:
@@ -247,7 +247,7 @@ class HomeAssistant:
 
         _LOGGER.debug("Handling intent %s with: %s", result.intent.name, data)
 
-        async with ClientSession() as session:
+        async with aiohttp.ClientSession() as session:
             web_response = await session.post(
                 f"{self.api_url}/intent/handle",
                 json={

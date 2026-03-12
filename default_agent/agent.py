@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Tuple
 from hassil import RecognizeResult, recognize_best
 from home_assistant_intents import ErrorKey
 from jinja2 import BaseLoader, Environment, StrictUndefined
+from unicode_rbnf import FormatPurpose, RbnfEngine
 
 from .hass_api import HomeAssistant, InfoForRecognition
 from .intents_loader import LanguageIntents
@@ -19,6 +20,9 @@ _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_ERROR_TEXT = "Sorry, I couldn't understand that."
 _ENV = Environment(loader=BaseLoader(), undefined=StrictUndefined)
+
+# language -> engine
+_RNBF_ENGINES: Dict[str, RbnfEngine] = {}
 
 
 class MatchFailedReason(str, Enum):
@@ -259,6 +263,33 @@ def render_response(
     if first_state is not None:
         # The first matched or unmatched entity is available as "state".
         variables["state"] = first_state
+
+    # Try to load engine for transforming numbers into words.
+    number_engine = _RNBF_ENGINES.get(lang_intents.language)
+    if number_engine is None:
+        try:
+            number_engine = RbnfEngine.for_language(lang_intents.language)
+        except ValueError:
+            _LOGGER.debug(
+                "num_to_words() doesn't supported language '%s'", lang_intents.language
+            )
+
+    def num_to_words(number, purpose: str = "cardinal") -> str:
+        if number_engine is None:
+            # Not much else we can do
+            return str(number)
+
+        if purpose == "year":
+            format_purpose = FormatPurpose.YEAR
+        elif purpose == "ordinal":
+            format_purpose = FormatPurpose.ORDINAL
+        else:
+            # Default
+            format_purpose = FormatPurpose.CARDINAL
+
+        return number_engine.format_number(number, purpose=format_purpose).text
+
+    variables["num_to_words"] = num_to_words
 
     # TODO: We're using StrictUndefined for Jinja2 rendering right now.
     # We may want to consider making undefined objects "falsey" like Home
