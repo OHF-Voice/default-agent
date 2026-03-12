@@ -8,4 +8,6 @@ tmp/
 build
 htmlcov
 
+*.egg-info/
+
 /local/
