@@ -41,3 +41,7 @@ Just like in Home Assistant, [custom sentences](https://www.home-assistant.io/vo
 
 If you just want to use custom sentences, the `--no-builtin-intents` option will disable loading the built-in intents.
 
+## Disabling Intents
+
+You may disable specific intents by using `--disable-intent <intent>`. These intents will not be loaded (either from built-in intents or your custom sentences), and therefore cannot be matched.
+
