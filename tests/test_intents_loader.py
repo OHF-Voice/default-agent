@@ -47,3 +47,22 @@ def test_load_custom_intent(
     result = recognize("what time is it", lang_intents.intents, slot_lists=slot_lists)
     assert result is not None
     assert result.intent.name == "HassGetCurrentTime"
+
+
+def test_disabled_intents(slot_lists: Dict[str, SlotList]) -> None:
+    disabled_loader = IntentsLoader(
+        custom_sentences_dirs=[_TESTS_DIR / "custom_sentences"],
+        disabled_intents=["TestIntent"],
+    )
+    lang_intents = disabled_loader.get_intents("en")
+
+    assert lang_intents is not None
+
+    # Disabled intent is not recognized
+    result = recognize("this is test 5", lang_intents.intents, slot_lists=slot_lists)
+    assert result is None
+
+    # Other intents are still available
+    result = recognize("what time is it", lang_intents.intents, slot_lists=slot_lists)
+    assert result is not None
+    assert result.intent.name == "HassGetCurrentTime"

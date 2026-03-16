@@ -48,6 +48,11 @@ async def main() -> None:
         action="store_true",
         help="Don't load intents from home-assistant-intents package",
     )
+    parser.add_argument(
+        "--disable-intent",
+        action="append",
+        help="Disable a specific intent by name",
+    )
     #
     parser.add_argument(
         "--device-id",
@@ -71,6 +76,7 @@ async def main() -> None:
         custom_sentences_dirs=args.custom_sentences,
         intents_repo_dir=args.intents_repo,
         load_builtin_intents=(not args.no_builtin_intents),
+        disabled_intents=args.disable_intent,
     )
 
     server = AsyncServer.from_uri(args.uri)

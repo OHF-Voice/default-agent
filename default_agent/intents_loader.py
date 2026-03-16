@@ -30,10 +30,12 @@ class IntentsLoader:
         custom_sentences_dirs: Optional[Iterable[Union[str, Path]]] = None,
         intents_repo_dir: Optional[Union[str, Path]] = None,
         load_builtin_intents: bool = True,
+        disabled_intents: Optional[List[str]] = None,
     ) -> None:
         self.lang_intents: Dict[str, LanguageIntents] = {}
         self.lang_map: Dict[str, str] = {}
         self.load_builtin_intents = load_builtin_intents
+        self.disabled_intents = disabled_intents or []
 
         self.intents_repo_dir: Optional[Path] = None
         if intents_repo_dir:
@@ -136,6 +138,17 @@ class IntentsLoader:
                 original_language or language,
             )
             return None
+
+        if self.disabled_intents:
+            intents_to_remove = [
+                key
+                for key in intents_dict.get("intents", {})
+                if key in self.disabled_intents
+            ]
+            for key in intents_to_remove:
+                del intents_dict["intents"][key]
+
+            _LOGGER.debug("Disabled intents: %s", intents_to_remove)
 
         responses_dict = intents_dict.get("responses", {})
 
