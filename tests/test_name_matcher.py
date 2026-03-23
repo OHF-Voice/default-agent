@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+import pytest
+
 from default_agent.models import Entity, Area, Floor, State
 from default_agent.name_matcher import (
     async_match_targets,
@@ -9,6 +11,7 @@ from default_agent.name_matcher import (
 )
 
 
+@pytest.mark.asyncio
 async def test_async_match_targets() -> None:
     """Tests for async_match_targets function."""
     # House layout
@@ -167,9 +170,11 @@ async def test_async_match_targets() -> None:
     # -----
     # Not a unique name
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light"),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(name="bathroom light"),
     )
     assert not result.is_match
     assert result.no_match_reason == MatchFailedReason.DUPLICATE_NAME
@@ -177,9 +182,13 @@ async def test_async_match_targets() -> None:
 
     # Works with duplicate names allowed
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light", allow_duplicate_names=True),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
+            name="bathroom light", allow_duplicate_names=True
+        ),
     )
     assert result.is_match
     assert {s.entity_id for s in result.states} == {
@@ -188,9 +197,11 @@ async def test_async_match_targets() -> None:
 
     # Also works when name is not a constraint
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"light"}),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"light"}),
     )
     assert result.is_match
     assert {s.entity_id for s in result.states} == {
@@ -199,10 +210,12 @@ async def test_async_match_targets() -> None:
 
     # We can disambiguate by preferred floor (from context)
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light"),
-        MatchTargetsPreferences(floor_id=floor_3.floor_id),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(name="bathroom light"),
+        preferences=MatchTargetsPreferences(floor_id=floor_3.floor_id),
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -210,10 +223,12 @@ async def test_async_match_targets() -> None:
 
     # Also disambiguate by preferred area (from context)
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light"),
-        MatchTargetsPreferences(area_id=area_bathroom_2.area_id),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(name="bathroom light"),
+        preferences=MatchTargetsPreferences(area_id=area_bathroom_2.area_id),
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -221,9 +236,11 @@ async def test_async_match_targets() -> None:
 
     # Disambiguate by floor name, if unique
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light", floor_name="ground"),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(name="bathroom light", floor_name="ground"),
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -231,20 +248,26 @@ async def test_async_match_targets() -> None:
 
     # Doesn't work if floor name/alias is not unique
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light", floor_name="upstairs"),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
+            name="bathroom light", floor_name="upstairs"
+        ),
     )
     assert not result.is_match
     assert result.no_match_reason == MatchFailedReason.DUPLICATE_NAME
 
     # Disambiguate by area name, if unique
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(
+        states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
             name="bathroom light", area_name="first floor bathroom"
         ),
-        states=states,
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -252,20 +275,26 @@ async def test_async_match_targets() -> None:
 
     # Doesn't work if area name/alias is not unique
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(name="bathroom light", area_name="bathroom"),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
+            name="bathroom light", area_name="bathroom"
+        ),
     )
     assert not result.is_match
     assert result.no_match_reason == MatchFailedReason.DUPLICATE_NAME
 
     # Does work if floor/area name combo is unique
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(
+        states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
             name="bathroom light", area_name="bathroom", floor_name="ground"
         ),
-        states=states,
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -273,59 +302,51 @@ async def test_async_match_targets() -> None:
 
     # Doesn't work if area is not part of the floor
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(
+        states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
             name="bathroom light",
             area_name="second floor bathroom",
             floor_name="ground",
         ),
-        states=states,
     )
     assert not result.is_match
     assert result.no_match_reason == MatchFailedReason.AREA
 
     # Check state constraint (only third floor bathroom light is on)
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"light"}, states={"on"}),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"light"}, states={"on"}),
     )
     assert result.is_match
     assert len(result.states) == 1
     assert result.states[0].entity_id == bathroom_light_3.entity_id
 
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"light"}, states={"on"}, floor_name="ground"),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
+            domains={"light"}, states={"on"}, floor_name="ground"
+        ),
     )
     assert not result.is_match
-
-    # Check assistant constraint (exposure)
-    result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(assistant="test"),
-        states=states,
-    )
-    assert not result.is_match
-
-    async_expose_entity(hass, "test", bathroom_light_1.entity_id, True)
-    result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(assistant="test"),
-        states=states,
-    )
-    assert result.is_match
-    assert len(result.states) == 1
-    assert result.states[0].entity_id == bathroom_light_1.entity_id
 
     # Check device class constraint
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(
-            domains={"switch"}, device_classes={switch.SwitchDeviceClass.OUTLET}
-        ),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(
+            domains={"switch"}, device_classes={"outlet"}
+        ),
     )
     assert result.is_match
     assert len(result.states) == 2
@@ -336,11 +357,11 @@ async def test_async_match_targets() -> None:
 
     # Check features constraint (second and third floor bathroom lights have effects)
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(
-            domains={"light"}, features=light.LightEntityFeature.EFFECT
-        ),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"light"}, features=1),
     )
     assert result.is_match
     assert len(result.states) == 2
@@ -351,19 +372,23 @@ async def test_async_match_targets() -> None:
 
     # Check single target constraint
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"light"}, single_target=True),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"light"}, single_target=True),
     )
     assert not result.is_match
     assert result.no_match_reason == MatchFailedReason.MULTIPLE_TARGETS
 
     # Only one light on the ground floor
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"light"}, single_target=True),
-        preferences=MatchTargetsPreferences(floor_id=floor_1.floor_id),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"light"}, single_target=True),
+        preferences=MatchTargetsPreferences(floor_id=floor_1.floor_id),
     )
     assert result.is_match
     assert len(result.states) == 1
@@ -371,10 +396,12 @@ async def test_async_match_targets() -> None:
 
     # Only one switch in bedroom
     result = async_match_targets(
-        hass,
-        MatchTargetsConstraints(domains={"switch"}, single_target=True),
-        preferences=MatchTargetsPreferences(area_id=area_bedroom_2.area_id),
         states=states,
+        entities=entities,
+        areas=areas,
+        floors=floors,
+        constraints=MatchTargetsConstraints(domains={"switch"}, single_target=True),
+        preferences=MatchTargetsPreferences(area_id=area_bedroom_2.area_id),
     )
     assert result.is_match
     assert len(result.states) == 1

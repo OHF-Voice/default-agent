@@ -146,7 +146,7 @@ def _default_area_candidate_filter(
     candidate: MatchTargetsCandidate, possible_area_ids: Collection[str]
 ) -> bool:
     """Keep candidates in the possible areas."""
-    return (candidate.area is not None) and (candidate.area.id in possible_area_ids)
+    return (candidate.area is not None) and (candidate.area.area_id in possible_area_ids)
 
 
 def _normalize_name(name: str) -> str:
