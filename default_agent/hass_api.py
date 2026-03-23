@@ -9,14 +9,7 @@ from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
-from .models import (
-    ATTR_FRIENDLY_NAME,
-    Area,
-    Entity,
-    Floor,
-    State,
-    ATTR_SUPPORTED_FEATURES,
-)
+from .models import ATTR_FRIENDLY_NAME, Area, Entity, Floor, State
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -8,8 +8,6 @@ import pytest
 from hassil import SlotList, TextSlotList
 
 from default_agent.agent import async_converse, render_response
-from default_agent.models import Area, Floor, State
-
 from default_agent.hass_api import InfoForRecognition
 from default_agent.intents_loader import IntentsLoader
 

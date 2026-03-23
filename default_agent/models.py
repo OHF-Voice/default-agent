@@ -3,7 +3,7 @@
 import itertools
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Optional, List, Dict, Final
+from typing import Any, Dict, Final, List, Optional
 
 ATTR_SUPPORTED_FEATURES: Final = "supported_features"
 ATTR_DEVICE_CLASS: Final = "device_class"

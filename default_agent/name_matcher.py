@@ -1,16 +1,16 @@
 import itertools
-from collections.abc import Collection, Callable, Iterable
+from collections.abc import Callable, Collection, Iterable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Dict
+from typing import Dict, List
 
 from .models import (
-    Entity,
+    ATTR_DEVICE_CLASS,
+    ATTR_SUPPORTED_FEATURES,
     Area,
+    Entity,
     Floor,
     State,
-    ATTR_SUPPORTED_FEATURES,
-    ATTR_DEVICE_CLASS,
 )
 
 
@@ -146,7 +146,9 @@ def _default_area_candidate_filter(
     candidate: MatchTargetsCandidate, possible_area_ids: Collection[str]
 ) -> bool:
     """Keep candidates in the possible areas."""
-    return (candidate.area is not None) and (candidate.area.area_id in possible_area_ids)
+    return (candidate.area is not None) and (
+        candidate.area.area_id in possible_area_ids
+    )
 
 
 def _normalize_name(name: str) -> str:
@@ -255,6 +257,7 @@ def find_floors(name: str, floors: Iterable[Floor]) -> Iterable[Floor]:
 
 def async_match_targets(
     states: List[State],
+    *,
     entities: Dict[str, Entity],
     areas: Dict[str, Area],
     floors: Dict[str, Floor],

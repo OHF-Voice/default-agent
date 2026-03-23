@@ -2,12 +2,12 @@ from typing import Dict, List
 
 import pytest
 
-from default_agent.models import Entity, Area, Floor, State
+from default_agent.models import Area, Entity, Floor, State
 from default_agent.name_matcher import (
-    async_match_targets,
     MatchFailedReason,
     MatchTargetsConstraints,
     MatchTargetsPreferences,
+    async_match_targets,
 )
 
 
