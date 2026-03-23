@@ -7,7 +7,12 @@ from hassil import RecognizeResult
 from .hass_api import HomeAssistant, InfoForRecognition
 from .models import State
 from .name_matcher import MatchTargetsResult
-from .util import MediaPlayerEntityFeature, color_name_to_rgb
+from .util import (
+    MediaPlayerEntityFeature,
+    color_name_to_rgb,
+    VacuumEntityFeature,
+    FanEntityFeature,
+)
 
 INTENT_DOMAINS: Dict[str, Union[str, Set[str]]] = {
     "HassLightSet": "light",
@@ -22,9 +27,22 @@ INTENT_DOMAINS: Dict[str, Union[str, Set[str]]] = {
     "HassMediaNext": "media_player",
     "HassMediaPrevious": "media_player",
     "HassMediaSearchAndPlay": "media_player",
+    "HassMediaPlayerMute": "media_player",
+    "HassMediaPlayerUnmute": "media_player",
+    "HassSetVolume": "media_player",
+    "HassSetVolumeRelative": "media_player",
+    #
+    "HassFanSetSpeed": "fan",
+    #
+    "HassLawnMowerStartMowing": "lawn_mower",
+    "HassLawnMowerDock": "lawn_mower",
 }
 
 INTENT_SUPPORTED_FEATURES: Dict[str, int] = {
+    "HassVacuumStart": VacuumEntityFeature.START,
+    "HassVacuumReturnToBase": VacuumEntityFeature.RETURN_HOME,
+    "HassVacuumCleanArea": VacuumEntityFeature.CLEAN_AREA,
+    #
     "HassMediaPause": MediaPlayerEntityFeature.PAUSE,
     "HassMediaUnpause": MediaPlayerEntityFeature.PLAY,
     "HassMediaNext": MediaPlayerEntityFeature.NEXT_TRACK,
@@ -35,6 +53,8 @@ INTENT_SUPPORTED_FEATURES: Dict[str, int] = {
     "HassMediaPlayerUnmute": MediaPlayerEntityFeature.VOLUME_MUTE,
     "HassSetVolume": MediaPlayerEntityFeature.VOLUME_SET,
     "HassSetVolumeRelative": MediaPlayerEntityFeature.VOLUME_SET,
+    #
+    "HassFanSetSpeed": FanEntityFeature.SET_SPEED,
 }
 
 INTENT_STATES: Dict[str, Union[str, Set[str]]] = {
@@ -58,9 +78,13 @@ class IntentHandledResult:
 
 async def async_handle_intent(
     hass: HomeAssistant,
+    *,
     intent_result: RecognizeResult,
     match_result: MatchTargetsResult,
     hass_info: InfoForRecognition,
+    language: str,
+    device_id: Optional[str] = None,
+    satellite_id: Optional[str] = None,
 ) -> Optional[IntentHandledResult]:
     intent_name = intent_result.intent.name
     entity_ids = [s.entity_id for s in match_result.states]
@@ -321,5 +345,28 @@ async def async_handle_intent(
         return result
 
     # TODO: HassMediaSearchAndPlay
+
+    # TODO: timers
+    if intent_name == "HassStartTimer":
+        await hass.handle_intent(
+            intent_result,
+            language=language,
+            device_id=device_id,
+            satellite_id=satellite_id,
+        )
+        return result
+
+    if intent_name == "HassFanSetSpeed":
+        percentage = int(intent_result.entities["percentage"].value)
+
+        await hass.trigger_service(
+            "fan",
+            "set_percentage",
+            service_data={"percentage": percentage},
+            target={"entity_id": entity_ids},
+        )
+        return result
+
+    # TODO: lawn mowers
 
     return None

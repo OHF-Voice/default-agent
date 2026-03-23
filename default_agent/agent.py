@@ -94,6 +94,8 @@ async def async_converse(
         intent_result.context,
     )
 
+    # TODO: move timers here and take a different path
+
     # Match names
     constraints = MatchTargetsConstraints()
     name_value = intent_result.entities.get(SLOT_NAME)
@@ -165,7 +167,13 @@ async def async_converse(
 
     try:
         handle_result = await async_handle_intent(
-            hass, intent_result, match_result, hass_info
+            hass,
+            intent_result=intent_result,
+            match_result=match_result,
+            hass_info=hass_info,
+            language=lang_intents.language,
+            device_id=device_id,
+            satellite_id=satellite_id,
         )
         if handle_result:
             response_text = render_response(

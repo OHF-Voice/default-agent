@@ -172,6 +172,17 @@ COLORS = {
 }
 
 
+def color_name_to_rgb(color_name: str) -> RGBColor:
+    """Convert color name to RGB hex value."""
+    # COLORS map has no spaces in it, so make the color_name have no
+    # spaces in it as well for matching purposes
+    hex_value = COLORS.get(color_name.replace(" ", "").lower())
+    if not hex_value:
+        raise ValueError("Unknown color")
+
+    return hex_value
+
+
 class MediaPlayerEntityFeature(IntFlag):
     """Supported features of the media player entity."""
 
@@ -200,12 +211,32 @@ class MediaPlayerEntityFeature(IntFlag):
     SEARCH_MEDIA = 4194304
 
 
-def color_name_to_rgb(color_name: str) -> RGBColor:
-    """Convert color name to RGB hex value."""
-    # COLORS map has no spaces in it, so make the color_name have no
-    # spaces in it as well for matching purposes
-    hex_value = COLORS.get(color_name.replace(" ", "").lower())
-    if not hex_value:
-        raise ValueError("Unknown color")
+class VacuumEntityFeature(IntFlag):
+    """Supported features of the vacuum entity."""
 
-    return hex_value
+    TURN_ON = 1  # Deprecated, not supported by StateVacuumEntity
+    TURN_OFF = 2  # Deprecated, not supported by StateVacuumEntity
+    PAUSE = 4
+    STOP = 8
+    RETURN_HOME = 16
+    FAN_SPEED = 32
+    BATTERY = 64
+    STATUS = 128  # Deprecated, not supported by StateVacuumEntity
+    SEND_COMMAND = 256
+    LOCATE = 512
+    CLEAN_SPOT = 1024
+    MAP = 2048
+    STATE = 4096  # Must be set by vacuum platforms derived from StateVacuumEntity
+    START = 8192
+    CLEAN_AREA = 16384
+
+
+class FanEntityFeature(IntFlag):
+    """Supported features of the fan entity."""
+
+    SET_SPEED = 1
+    OSCILLATE = 2
+    DIRECTION = 4
+    PRESET_MODE = 8
+    TURN_OFF = 16
+    TURN_ON = 32
