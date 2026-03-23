@@ -2,10 +2,7 @@
 
 import itertools
 import logging
-from collections.abc import Collection
-from dataclasses import dataclass
 from datetime import datetime, time
-from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
 from hassil import RecognizeResult, recognize_best
@@ -15,6 +12,7 @@ from unicode_rbnf import FormatPurpose, RbnfEngine
 
 from .hass_api import HomeAssistant, InfoForRecognition
 from .intents_loader import LanguageIntents
+from .name_matcher import MatchFailedReason, MatchTargetsConstraints
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,87 +21,6 @@ _ENV = Environment(loader=BaseLoader(), undefined=StrictUndefined)
 
 # language -> engine
 _RNBF_ENGINES: Dict[str, RbnfEngine] = {}
-
-
-class MatchFailedReason(str, Enum):
-    """Possible reasons for match failure.
-
-    Must align with homeassistant.helpers.intent.MatchFailedReason
-    """
-
-    NAME = "NAME"
-    """No entities matched name constraint."""
-
-    AREA = "AREA"
-    """No entities matched area constraint."""
-
-    FLOOR = "FLOOR"
-    """No entities matched floor constraint."""
-
-    DOMAIN = "DOMAIN"
-    """No entities matched domain constraint."""
-
-    DEVICE_CLASS = "DEVICE_CLASS"
-    """No entities matched device class constraint."""
-
-    FEATURE = "FEATURE"
-    """No entities matched supported features constraint."""
-
-    STATE = "STATE"
-    """No entities matched required states constraint."""
-
-    ASSISTANT = "ASSISTANT"
-    """No entities matched exposed to assistant constraint."""
-
-    INVALID_AREA = "INVALID_AREA"
-    """Area name from constraint does not exist."""
-
-    INVALID_FLOOR = "INVALID_FLOOR"
-    """Floor name from constraint does not exist."""
-
-    DUPLICATE_NAME = "DUPLICATE_NAME"
-    """Two or more entities matched the same name constraint and could not be disambiguated."""
-
-    MULTIPLE_TARGETS = "MULTIPLE_TARGETS"
-    """Two or more entities matched when a single target is required."""
-
-
-@dataclass
-class MatchTargetsConstraints:
-    """Constraints for async_match_targets.
-
-    Used here to determine error message.
-    """
-
-    name: str | None = None
-    """Entity name or alias."""
-
-    area_name: str | None = None
-    """Area name, id, or alias."""
-
-    floor_name: str | None = None
-    """Floor name, id, or alias."""
-
-    domains: Collection[str] | None = None
-    """Domain names."""
-
-    device_classes: Collection[str] | None = None
-    """Device class names."""
-
-    features: int | None = None
-    """Required supported features."""
-
-    states: Collection[str] | None = None
-    """Required states for entities."""
-
-    assistant: str | None = None
-    """Name of assistant that entities should be exposed to."""
-
-    allow_duplicate_names: bool = False
-    """True if entities with duplicate names are allowed in result."""
-
-    single_target: bool = False
-    """True if result must contain a single target."""
 
 
 async def async_converse(
