@@ -9,7 +9,14 @@ from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
-from .models import Area, Entity, Floor, State
+from .models import (
+    ATTR_FRIENDLY_NAME,
+    Area,
+    Entity,
+    Floor,
+    State,
+    ATTR_SUPPORTED_FEATURES,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,9 +186,11 @@ class HomeAssistant:
                             # Skip disabled entities
                             continue
 
-                        name = entity_info.get("name") or entity_info["original_name"]
+                        name = (
+                            entity_info.get("name", "") or entity_info["original_name"]
+                        )
                         if entity_info.get("aliases"):
-                            names.extend(entity_info["aliases"])
+                            names.extend(filter(None, entity_info["aliases"]))
 
                     entity_area_id = None
                     if entity_info:
@@ -194,14 +203,14 @@ class HomeAssistant:
 
                     if not name:
                         # Try friendly name
-                        name = attributes.get("friendly_name")
+                        name = attributes.get(ATTR_FRIENDLY_NAME, "")
 
                     if name:
                         names.append(name)
 
                     entities[entity_id] = Entity(
                         entity_id=entity_id,
-                        name=name or "",
+                        name=name,
                         aliases=names if names else None,
                         attributes=attributes,
                         area_id=entity_area_id,
