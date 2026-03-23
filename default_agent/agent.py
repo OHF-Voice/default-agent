@@ -9,9 +9,15 @@ from home_assistant_intents import ErrorKey
 from jinja2 import BaseLoader, Environment, StrictUndefined
 from unicode_rbnf import FormatPurpose, RbnfEngine
 
-
-from .const import SLOT_NAME, SLOT_AREA, SLOT_FLOOR, SLOT_DOMAIN
-from .hass_api import HomeAssistant, InfoForRecognition
+from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
+from .hass_api import HomeAssistant, HomeAssistantError, InfoForRecognition
+from .intents import (
+    INTENT_DOMAINS,
+    INTENT_STATES,
+    INTENT_SUPPORTED_FEATURES,
+    IntentHandledResult,
+    async_handle_intent,
+)
 from .intents_loader import LanguageIntents
 from .name_matcher import (
     MatchFailedReason,
@@ -20,7 +26,6 @@ from .name_matcher import (
     MatchTargetsResult,
     async_match_targets,
 )
-from .intents import async_handle_intent, IntentHandledResult
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -95,10 +100,44 @@ async def async_converse(
     if name_value is not None:
         constraints.name = name_value.value
 
+    area_value = intent_result.entities.get(SLOT_AREA)
+    if area_value is not None:
+        constraints.area_name = area_value.value
+
+    floor_value = intent_result.entities.get(SLOT_FLOOR)
+    if floor_value is not None:
+        constraints.floor_name = floor_value.value
+
     domain_value = intent_result.entities.get(SLOT_DOMAIN)
     if domain_value is not None:
+        # Set by intent slot
         constraints.domains = {domain_value.value}
+    elif "domain" in intent_result.context:
+        # Inferred from context
+        constraints.domains = {intent_result.context["domain"]}
+    else:
+        # Inferred from intent
+        intent_domains = INTENT_DOMAINS.get(intent_result.intent.name)
+        if intent_domains:
+            if isinstance(intent_domains, str):
+                constraints.domains = {intent_domains}
+            else:
+                constraints.domains = intent_domains
 
+    # Supported features inferred from intent
+    constraints.features = INTENT_SUPPORTED_FEATURES.get(intent_result.intent.name)
+
+    # Required entity states from intent.
+    # We ignore state constraints if an entity is targeted by name.
+    if "name" not in intent_result.entities:
+        required_states = INTENT_STATES.get(intent_result.intent.name)
+        if required_states:
+            if isinstance(required_states, str):
+                constraints.states = {required_states}
+            else:
+                constraints.states = required_states
+
+    # Area/floor preferences (based on where voice satellite is located)
     preferences: Optional[MatchTargetsPreferences] = None
     if hass_info.preferred_area_id or hass_info.preferred_floor_id:
         preferences = MatchTargetsPreferences(
@@ -124,12 +163,17 @@ async def async_converse(
         error_text = render_error(lang_intents, error_key, error_data)
         return (False, error_text)
 
-    handle_result = await async_handle_intent(hass, intent_result, match_result)
-    if handle_result:
-        response_text = render_response(
-            intent_result, handle_result, lang_intents, hass_info
+    try:
+        handle_result = await async_handle_intent(
+            hass, intent_result, match_result, hass_info
         )
-        return (True, response_text)
+        if handle_result:
+            response_text = render_response(
+                intent_result, handle_result, lang_intents, hass_info
+            )
+            return (True, response_text)
+    except HomeAssistantError as err:
+        return (False, str(err))
 
     return (False, _DEFAULT_ERROR_TEXT)
 

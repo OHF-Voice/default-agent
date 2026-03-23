@@ -9,10 +9,14 @@ from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
+from .const import SLOT_AREA, SLOT_FLOOR, SLOT_NAME
 from .models import ATTR_FRIENDLY_NAME, Area, Entity, Floor, State
-from .const import SLOT_NAME, SLOT_AREA, SLOT_FLOOR
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class HomeAssistantError(Exception):
+    pass
 
 
 @dataclass
@@ -92,12 +96,12 @@ class HomeAssistant:
                 msg = await websocket.receive_json()
                 assert msg["success"], msg
 
-                entity_ids = []
+                exposed_entity_ids = set()
                 for entity_id, exposed_info in msg["result"][
                     "exposed_entities"
                 ].items():
                     if exposed_info.get("conversation"):
-                        entity_ids.append(entity_id)
+                        exposed_entity_ids.add(entity_id)
 
                 await websocket.send_json(
                     {
@@ -108,8 +112,12 @@ class HomeAssistant:
                 msg = await websocket.receive_json()
                 assert msg["success"], msg
                 for state_data in msg["result"]:
-                    states[state_data["entity_id"]] = State(
-                        entity_id=state_data["entity_id"],
+                    entity_id = state_data["entity_id"]
+                    if entity_id not in exposed_entity_ids:
+                        continue
+
+                    states[entity_id] = State(
+                        entity_id=entity_id,
                         state=state_data["state"],
                         attributes=state_data.get("attributes", {}),
                     )
@@ -157,6 +165,16 @@ class HomeAssistant:
                         if name:
                             area_names.add(name)
 
+                # Devices
+                await websocket.send_json(
+                    {"id": next_id(), "type": "config/device_registry/list"}
+                )
+                msg = await websocket.receive_json()
+                assert msg["success"], msg
+                devices = {
+                    device_info["id"]: device_info for device_info in msg["result"]
+                }
+
                 # Contains aliases
                 # Check area_id as well as area of device_id
                 # Use original_device_class
@@ -164,7 +182,7 @@ class HomeAssistant:
                     {
                         "id": next_id(),
                         "type": "config/entity_registry/get_entries",
-                        "entity_ids": entity_ids,
+                        "entity_ids": list(exposed_entity_ids),
                     }
                 )
 
@@ -189,6 +207,14 @@ class HomeAssistant:
                     entity_area_id = None
                     if entity_info:
                         entity_area_id = entity_info.get("area_id")
+
+                        if not entity_area_id:
+                            # Try to get area from device
+                            device_id = entity_info.get("device_id")
+                            if device_id:
+                                device_info = devices.get(device_id)
+                                if device_info:
+                                    entity_area_id = device_info.get("area_id")
 
                     attributes: Dict[str, Any] = {}
                     state_data = states.get(entity_id)
@@ -216,16 +242,6 @@ class HomeAssistant:
                             name_list.values.append(
                                 TextSlotValue(TextChunk(name), name, {"domain": domain})
                             )
-
-                # Get device info
-                await websocket.send_json(
-                    {"id": next_id(), "type": "config/device_registry/list"}
-                )
-                msg = await websocket.receive_json()
-                assert msg["success"], msg
-                devices = {
-                    device_info["id"]: device_info for device_info in msg["result"]
-                }
 
                 # Get preferred area
                 if satellite_id:
@@ -356,4 +372,5 @@ class HomeAssistant:
                     },
                 )
                 msg = await websocket.receive_json()
-                assert msg["success"], msg
+                if not msg["success"]:
+                    raise HomeAssistantError(msg["error"]["message"])
