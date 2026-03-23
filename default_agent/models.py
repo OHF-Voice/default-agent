@@ -20,6 +20,11 @@ class State:
     def __post_init__(self) -> None:
         self.domain = self.entity_id.split(".", maxsplit=1)[0]
 
+    @property
+    def state_with_unit(self) -> Any:
+        # TODO: where to get unit?
+        return self.state
+
 
 @dataclass
 class Entity:

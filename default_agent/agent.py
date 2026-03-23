@@ -2,7 +2,6 @@
 
 import itertools
 import logging
-from datetime import datetime, time
 from typing import Any, Dict, Optional, Tuple
 
 from hassil import RecognizeResult, recognize_best
@@ -10,9 +9,18 @@ from home_assistant_intents import ErrorKey
 from jinja2 import BaseLoader, Environment, StrictUndefined
 from unicode_rbnf import FormatPurpose, RbnfEngine
 
+
+from .const import SLOT_NAME, SLOT_AREA, SLOT_FLOOR, SLOT_DOMAIN
 from .hass_api import HomeAssistant, InfoForRecognition
 from .intents_loader import LanguageIntents
-from .name_matcher import MatchFailedReason, MatchTargetsConstraints
+from .name_matcher import (
+    MatchFailedReason,
+    MatchTargetsConstraints,
+    MatchTargetsPreferences,
+    MatchTargetsResult,
+    async_match_targets,
+)
+from .intents import async_handle_intent, IntentHandledResult
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,15 +65,15 @@ async def async_converse(
     _LOGGER.debug(
         "Recognizing intent for text (language=%s): %s", lang_intents.language, text
     )
-    result = recognize_best(
+    intent_result = recognize_best(
         text,
         lang_intents.intents,
         slot_lists=hass_info.slot_lists,
         intent_context=intent_context,
         language=lang_intents.language,
-        best_slot_name="name",
+        best_slot_name=SLOT_NAME,
     )  # TODO: prefer custom sentences with "best_metadata_key"
-    if result is None:
+    if intent_result is None:
         # TODO: re-run with unmatched entities?
         _LOGGER.debug(
             "No intent recognized for text (language=%s): %s",
@@ -74,43 +82,61 @@ async def async_converse(
         )
         return (False, render_error(lang_intents, ErrorKey.NO_INTENT))
 
-    # Run the intent handler in Home Assistant
-    extra_data: Dict[str, Any] = {}
-    if hass_info.preferred_area_id:
-        extra_data["preferred_area_id"] = hass_info.preferred_area_id
-
-    if hass_info.preferred_floor_id:
-        extra_data["preferred_floor_id"] = hass_info.preferred_floor_id
-
-    # /api/intent/handle
-    intent_response = await hass.handle_intent(
-        result,
-        language=lang_intents.language,
-        device_id=device_id,
-        satellite_id=satellite_id,
-        extra_data=extra_data,
+    _LOGGER.debug(
+        "Recognized intent '%s' with slots: %s, context: %s",
+        intent_result.intent.name,
+        intent_result.entities,
+        intent_result.context,
     )
-    _LOGGER.debug("Intent response: %s", intent_response)
 
-    if intent_response.get("response_type") == "error":
-        # Intent failed in Home Assistant
-        return (False, get_intent_response_error(lang_intents, intent_response))
+    # Match names
+    constraints = MatchTargetsConstraints()
+    name_value = intent_result.entities.get(SLOT_NAME)
+    if name_value is not None:
+        constraints.name = name_value.value
 
-    # Check if intent handler in Home Assistant produced a response
-    speech = (
-        intent_response.get("speech", {}).get("plain", {}).get("speech", "").strip()
+    domain_value = intent_result.entities.get(SLOT_DOMAIN)
+    if domain_value is not None:
+        constraints.domains = {domain_value.value}
+
+    preferences: Optional[MatchTargetsPreferences] = None
+    if hass_info.preferred_area_id or hass_info.preferred_floor_id:
+        preferences = MatchTargetsPreferences(
+            area_id=hass_info.preferred_area_id, floor_id=hass_info.preferred_floor_id
+        )
+
+    _LOGGER.debug("Constaints: %s", constraints)
+    _LOGGER.debug("Preferences: %s", preferences)
+
+    match_result = async_match_targets(
+        hass_info.states.values(),
+        entities=hass_info.entities,
+        areas=hass_info.areas,
+        floors=hass_info.floors,
+        constraints=constraints,
+        preferences=preferences,
     )
-    if speech:
-        # Intent already has a response
-        return (True, speech)
 
-    # Render built-in response
-    return (True, render_response(result, intent_response, lang_intents, hass_info))
+    _LOGGER.debug("Match result: %s", match_result)
+
+    if not match_result.is_match:
+        error_key, error_data = get_match_error_response(match_result, constraints)
+        error_text = render_error(lang_intents, error_key, error_data)
+        return (False, error_text)
+
+    handle_result = await async_handle_intent(hass, intent_result, match_result)
+    if handle_result:
+        response_text = render_response(
+            intent_result, handle_result, lang_intents, hass_info
+        )
+        return (True, response_text)
+
+    return (False, _DEFAULT_ERROR_TEXT)
 
 
 def render_response(
-    result: RecognizeResult,
-    intent_response: Dict[str, Any],
+    intent_result: RecognizeResult,
+    handle_result: IntentHandledResult,
     lang_intents: LanguageIntents,
     info: InfoForRecognition,
 ) -> str:
@@ -121,65 +147,39 @@ def render_response(
     templates.
     """
     # result.response is a key into the intent's response templates
-    response_template = lang_intents.intent_responses.get(result.intent.name, {}).get(
-        result.response
-    )
+    response_template = lang_intents.intent_responses.get(
+        intent_result.intent.name, {}
+    ).get(intent_result.response)
     if not response_template:
         # No response template
         return ""
 
-    slots: Dict[str, Any] = {e.name: e.value for e in result.entities_list}
-    speech_slots = intent_response.get("speech_slots")
-    if speech_slots:
-        slots.update(speech_slots)
+    slots: Dict[str, Any] = {e.name: e.value for e in intent_result.entities_list}
+    slots.update(handle_result.speech_slots)
 
     def state_attr(entity_id: str, attr_name: str) -> Any:
-        return info.entity_attributes.get(entity_id, {}).get(attr_name)
+        state = info.states.get(entity_id)
+        if state is None:
+            return None
+
+        return state.attributes.get(attr_name)
 
     variables: Dict[str, Any] = {"slots": slots, "state_attr": state_attr}
-
-    # Patch for specific intents.
-    #
-    # We do this because the "speech slot" values set by the intent handler in
-    # Home Assistant were transformed into JSON via the REST API, but the
-    # response templates assume the original objects exist.
-    #
-    # For example, "HassGetCurrentTime" assumes a Python datetime object in
-    # slots.time, but we get back an ISO time string from the REST API.
-    intent_response_data = intent_response.get("data", {})
-    if result.intent.name == "HassGetCurrentTime":
-        # ISO -> time
-        time_str = slots.get("time")
-        if isinstance(time_str, str):
-            slots["time"] = time.fromisoformat(time_str)
-    elif result.intent.name == "HassGetCurrentDate":
-        # ISO -> datetime
-        date_str = slots.get("date")
-        if isinstance(date_str, str):
-            slots["date"] = datetime.fromisoformat(date_str)
 
     # The "query" field is mainly used by HassGetState to tell which entities
     # matched the question.
     #
     # If the users asks "is the bedroom light on", its state will show up in
     # "matched" if it's state is "on" and in "unmatched" if it's not.
-    query = intent_response_data.get("query", {})
-    matched = query.get("matched", [])
-    unmatched = query.get("unmatched", [])
-    first_state = None
-    for state in itertools.chain(matched, unmatched):
-        if first_state is None:
-            first_state = state
-
-        entity_id = state["entity_id"]
-        state["state_with_unit"] = state["state"]
-        state["domain"] = entity_id.split(".", maxsplit=1)[0]
-        state["attributes"] = info.entity_attributes.get(entity_id, {})
+    query = {
+        "matched": handle_result.matched_states,
+        "unmatched": handle_result.unmatched_states,
+    }
 
     variables["query"] = query
-    if first_state is not None:
+    if handle_result.matched_states is not None:
         # The first matched or unmatched entity is available as "state".
-        variables["state"] = first_state
+        variables["state"] = handle_result.matched_states[0]
 
     # Try to load engine for transforming numbers into words.
     number_engine = _RNBF_ENGINES.get(lang_intents.language)
@@ -213,7 +213,7 @@ def render_response(
     # Assistant does.
     _LOGGER.debug(
         "Rendering response '%s' with variables %s: %s",
-        result.response,
+        intent_result.response,
         variables,
         response_template,
     )
@@ -247,31 +247,8 @@ def render_error(
     return error_text
 
 
-def get_intent_response_error(
-    lang_intents: LanguageIntents, intent_response: Dict[str, Any]
-) -> str:
-    """Return the error text for a match failure."""
-    error_text = (
-        intent_response.get("speech", {}).get("plain", {}).get("speech", "")
-    ).strip()
-    if error_text:
-        # Response already contains error message
-        return error_text
-
-    match_error: Optional[Dict[str, Any]] = intent_response.get("data", {}).get(
-        "match_error"
-    )
-    if not match_error:
-        # No more information about why the intent failed
-        return _DEFAULT_ERROR_TEXT
-
-    error_key, error_data = get_match_error_response(match_error)
-
-    return render_error(lang_intents, error_key, error_data)
-
-
 def get_match_error_response(
-    match_error: Dict[str, Any],
+    match_result: MatchTargetsResult, constraints: MatchTargetsConstraints
 ) -> Tuple[ErrorKey, Dict[str, Any]]:
     """Return key and template arguments for error when target matching fails.
 
@@ -299,9 +276,8 @@ def get_match_error_response(
     because we only see why the *last* candidate was eliminated.
     """
 
-    constraints = MatchTargetsConstraints(**match_error["constraints"])
-    reason = MatchFailedReason(match_error["no_match_reason"])
-    no_match_name = match_error.get("no_match_name")
+    reason = match_result.no_match_reason
+    no_match_name = match_result.no_match_name
 
     if (
         reason in (MatchFailedReason.DEVICE_CLASS, MatchFailedReason.DOMAIN)

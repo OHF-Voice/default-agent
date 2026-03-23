@@ -10,6 +10,7 @@ from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
 from .models import ATTR_FRIENDLY_NAME, Area, Entity, Floor, State
+from .const import SLOT_NAME, SLOT_AREA, SLOT_FLOOR
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class HomeAssistant:
             current_id += 1
             return current_id
 
-        name_list = TextSlotList(name="name", values=[])
+        name_list = TextSlotList(name=SLOT_NAME, values=[])
         area_names: Set[str] = set()
         floor_names: Set[str] = set()
         states: Dict[str, State] = {}
@@ -261,9 +262,13 @@ class HomeAssistant:
 
         return InfoForRecognition(
             slot_lists={
-                "name": name_list,
-                "area": TextSlotList.from_strings(area_names, allow_template=False),
-                "floor": TextSlotList.from_strings(floor_names, allow_template=False),
+                SLOT_NAME: name_list,
+                SLOT_AREA: TextSlotList.from_strings(
+                    area_names, allow_template=False, name=SLOT_AREA
+                ),
+                SLOT_FLOOR: TextSlotList.from_strings(
+                    floor_names, allow_template=False, name=SLOT_FLOOR
+                ),
             },
             preferred_area_id=preferred_area_id,
             preferred_area_name=preferred_area_name,
@@ -307,3 +312,48 @@ class HomeAssistant:
             )
             assert web_response.status == 200
             return await web_response.json()
+
+    async def trigger_service(
+        self,
+        domain: str,
+        service: str,
+        service_data: Optional[Dict[str, Any]] = None,
+        target: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        current_id = 0
+
+        def next_id() -> int:
+            nonlocal current_id
+            current_id += 1
+            return current_id
+
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                self.websocket_api_url, max_msg_size=0
+            ) as websocket:
+                # Authenticate
+                msg = await websocket.receive_json()
+                assert msg["type"] == "auth_required", msg
+
+                await websocket.send_json(
+                    {
+                        "type": "auth",
+                        "access_token": self.token,
+                    },
+                )
+
+                msg = await websocket.receive_json()
+                assert msg["type"] == "auth_ok", msg
+
+                await websocket.send_json(
+                    {
+                        "id": next_id(),
+                        "type": "call_service",
+                        "domain": domain,
+                        "service": service,
+                        "service_data": service_data or {},
+                        "target": target or {},
+                    },
+                )
+                msg = await websocket.receive_json()
+                assert msg["success"], msg

@@ -256,7 +256,7 @@ def find_floors(name: str, floors: Iterable[Floor]) -> Iterable[Floor]:
 
 
 def async_match_targets(
-    states: List[State],
+    states: Collection[State],
     *,
     entities: Dict[str, Entity],
     areas: Dict[str, Area],
