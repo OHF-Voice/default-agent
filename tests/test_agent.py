@@ -8,6 +8,8 @@ import pytest
 from hassil import SlotList, TextSlotList
 
 from default_agent.agent import async_converse, render_response
+from default_agent.models import Area, Floor, State
+
 from default_agent.hass_api import InfoForRecognition
 from default_agent.intents_loader import IntentsLoader
 
@@ -43,7 +45,10 @@ async def test_async_converse(
         preferred_area_id="test-area",
         preferred_area_name="Test Area",
         preferred_floor_id="test-floor",
-        entity_attributes={},
+        states={},
+        entities={},
+        areas={},
+        floors={},
     )
     hass = AsyncMock()
     hass.get_info.return_value = hass_info
@@ -70,7 +75,10 @@ async def test_async_converse_error(
         preferred_area_id="test-area",
         preferred_area_name="Test Area",
         preferred_floor_id="test-floor",
-        entity_attributes={},
+        states={},
+        entities={},
+        areas={},
+        floors={},
     )
     hass = AsyncMock()
     hass.get_info.return_value = hass_info

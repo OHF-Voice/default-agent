@@ -96,9 +96,10 @@ async def test_unexposed_and_disabled_entities() -> None:
                 "get_states",
                 {
                     "result": [
-                        {"entity_id": "light.unexposed_light"},
+                        {"entity_id": "light.unexposed_light", "state": "off"},
                         {
                             "entity_id": "light.disabled_light",
+                            "state": "off",
                         },
                     ]
                 },

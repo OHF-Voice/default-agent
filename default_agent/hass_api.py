@@ -9,6 +9,8 @@ from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 
+from .models import Area, Entity, Floor, State
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -20,7 +22,10 @@ class InfoForRecognition:
     preferred_area_id: Optional[str]
     preferred_area_name: Optional[str]
     preferred_floor_id: Optional[str]
-    entity_attributes: Dict[str, Dict[str, Any]]
+    states: Dict[str, State]
+    entities: Dict[str, Entity]
+    areas: Dict[str, Area]
+    floors: Dict[str, Floor]
 
 
 class HomeAssistant:
@@ -52,7 +57,10 @@ class HomeAssistant:
         name_list = TextSlotList(name="name", values=[])
         area_names: Set[str] = set()
         floor_names: Set[str] = set()
-        entity_attributes: Dict[str, Dict[str, Any]] = {}
+        states: Dict[str, State] = {}
+        entities: Dict[str, Entity] = {}
+        areas: Dict[str, Area] = {}
+        floors: Dict[str, Floor] = {}
         preferred_area_id: Optional[str] = None
         preferred_area_name: Optional[str] = None
         preferred_floor_id: Optional[str] = None
@@ -98,7 +106,12 @@ class HomeAssistant:
                 )
                 msg = await websocket.receive_json()
                 assert msg["success"], msg
-                states = {s["entity_id"]: s for s in msg["result"]}
+                for state_data in msg["result"]:
+                    states[state_data["entity_id"]] = State(
+                        entity_id=state_data["entity_id"],
+                        state=state_data["state"],
+                        attributes=state_data.get("attributes", {}),
+                    )
 
                 # Floors
                 await websocket.send_json(
@@ -106,12 +119,16 @@ class HomeAssistant:
                 )
                 msg = await websocket.receive_json()
                 assert msg["success"], msg
-                floors = {
-                    floor_info["floor_id"]: floor_info for floor_info in msg["result"]
-                }
-                for floor_info in floors.values():
-                    names = [floor_info["name"]]
-                    names.extend(floor_info.get("aliases", []))
+                for floor_data in msg["result"]:
+                    floor_id = floor_data["floor_id"]
+                    floors[floor_id] = Floor(
+                        floor_id=floor_id,
+                        name=floor_data["name"],
+                        aliases=floor_data.get("aliases"),
+                    )
+                    names = [floor_data["name"]]
+                    if floor_data.get("aliases"):
+                        names.extend(floor_data["aliases"])
                     for name in names:
                         name = name.strip()
                         if name:
@@ -123,10 +140,17 @@ class HomeAssistant:
                 )
                 msg = await websocket.receive_json()
                 assert msg["success"], msg
-                areas = {area_info["area_id"]: area_info for area_info in msg["result"]}
-                for area_info in areas.values():
-                    names = [area_info["name"]]
-                    names.extend(area_info.get("aliases", []))
+                for area_data in msg["result"]:
+                    area_id = area_data["area_id"]
+                    areas[area_id] = Area(
+                        area_id=area_id,
+                        name=area_data["name"],
+                        aliases=area_data.get("aliases"),
+                        floor_id=area_data.get("floor_id"),
+                    )
+                    names = [area_data["name"]]
+                    if area_data.get("aliases"):
+                        names.extend(area_data["aliases"])
                     for name in names:
                         name = name.strip()
                         if name:
@@ -156,10 +180,17 @@ class HomeAssistant:
                             continue
 
                         name = entity_info.get("name") or entity_info["original_name"]
-                        names.extend(entity_info.get("aliases", []))
+                        if entity_info.get("aliases"):
+                            names.extend(entity_info["aliases"])
 
-                    attributes = states.get(entity_id, {}).get("attributes", {})
-                    entity_attributes[entity_id] = attributes
+                    entity_area_id = None
+                    if entity_info:
+                        entity_area_id = entity_info.get("area_id")
+
+                    attributes: Dict[str, Any] = {}
+                    state_data = states.get(entity_id)
+                    if state_data:
+                        attributes = state_data.attributes
 
                     if not name:
                         # Try friendly name
@@ -167,6 +198,14 @@ class HomeAssistant:
 
                     if name:
                         names.append(name)
+
+                    entities[entity_id] = Entity(
+                        entity_id=entity_id,
+                        name=name or "",
+                        aliases=names if names else None,
+                        attributes=attributes,
+                        area_id=entity_area_id,
+                    )
 
                     for name in names:
                         name = name.strip()
@@ -213,9 +252,10 @@ class HomeAssistant:
                     preferred_area_id = devices.get(device_id, {}).get("area_id")
 
                 if preferred_area_id:
-                    preferred_area_info = areas.get(preferred_area_id, {})
-                    preferred_area_name = preferred_area_info.get("name")
-                    preferred_floor_id = preferred_area_info.get("floor_id")
+                    preferred_area_info = areas.get(preferred_area_id)
+                    if preferred_area_info:
+                        preferred_area_name = preferred_area_info.name
+                        preferred_floor_id = preferred_area_info.floor_id
 
         return InfoForRecognition(
             slot_lists={
@@ -226,7 +266,10 @@ class HomeAssistant:
             preferred_area_id=preferred_area_id,
             preferred_area_name=preferred_area_name,
             preferred_floor_id=preferred_floor_id,
-            entity_attributes=entity_attributes,
+            states=states,
+            entities=entities,
+            areas=areas,
+            floors=floors,
         )
 
     async def handle_intent(
