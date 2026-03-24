@@ -297,27 +297,24 @@ class HomeAssistant:
 
     async def handle_intent(
         self,
-        result: RecognizeResult,
+        intent_name: str,
         language: str,
         *,
+        data: Optional[Dict[str, Any]] = None,
         device_id: Optional[str] = None,
         satellite_id: Optional[str] = None,
         assistant: Optional[str] = "conversation",
-        extra_data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Handle intent with REST API and return response."""
         headers = {"Authorization": f"Bearer {self.token}"}
-        data = {e.name: e.value for e in result.entities_list}
-        if extra_data:
-            data.update(extra_data)
 
-        _LOGGER.debug("Handling intent %s with: %s", result.intent.name, data)
+        _LOGGER.debug("Handling intent %s with: %s", intent_name, data)
 
         async with aiohttp.ClientSession() as session:
             web_response = await session.post(
                 f"{self.api_url}/intent/handle",
                 json={
-                    "name": result.intent.name,
+                    "name": intent_name,
                     "data": data,
                     "language": language,
                     "assistant": assistant,

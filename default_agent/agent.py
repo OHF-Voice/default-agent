@@ -1,6 +1,5 @@
 """Default agent implementation."""
 
-import itertools
 import logging
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
@@ -22,7 +21,7 @@ from .intents import (
     async_handle_intent,
 )
 from .intents_loader import LanguageIntents
-from .intent_actions import IntentActions
+from .intent_actions import Intent, IntentActions, Action
 from .name_matcher import (
     MatchFailedReason,
     MatchTargetsConstraints,
@@ -104,8 +103,8 @@ async def async_converse(
         # Recognized intent, but no actions/response
         return (True, "")
 
-    speech_slots: Dict[str, Any] = {}
-
+    match_result: Optional[MatchTargetsResult] = None
+    match_domain: Optional[str] = None
     if actions.match_targets:
         # Match names/areas/floors
         constraints = MatchTargetsConstraints()
@@ -136,6 +135,9 @@ async def async_converse(
                     constraints.domains = {intent_domains}
                 else:
                     constraints.domains = intent_domains
+
+        if constraints.domains:
+            match_domain = next(iter(constraints.domains))
 
         # Supported features inferred from intent
         constraints.features = INTENT_SUPPORTED_FEATURES.get(intent_result.intent.name)
@@ -177,11 +179,57 @@ async def async_converse(
             error_text = render_error(lang_intents, error_key, error_data)
             return (False, error_text)
 
-    # TODO: execute actions
+    default_vars: Dict[str, Any] = {
+        "now": datetime.now,
+        "domain": "",
+        "target_states": [],
+        "target_entity_ids": [],
+        "intent_slots": {},
+    }
 
-    default_vars: Dict[str, Any] = {"now": datetime.now}
+    intent_slots = {e.name: e.value for e in intent_result.entities_list}
+    default_vars["intent_slots"] = intent_slots
+
+    if match_result is not None:
+        default_vars["target_states"] = match_result.states
+        default_vars["target_entity_ids"] = [s.entity_id for s in match_result.states]
+
+    if match_domain:
+        default_vars["domain"] = match_domain
+
+    for action_or_intent in actions.evaluate_actions(_ENV, default_vars):
+        if isinstance(action_or_intent, Action):
+            action: Action = action_or_intent
+            _LOGGER.debug("Running action: %s", action)
+            action_domain, action_service = action.action.split(".", maxsplit=1)
+            target_dict: Optional[Dict[str, Any]] = None
+
+            if action.target:
+                target_dict = {
+                    "entity_id": action.target.entity_id,
+                    "area_id": action.target.area_id,
+                    "floor_id": action.target.floor_id,
+                }
+
+            await hass.trigger_service(
+                action_domain,
+                action_service,
+                service_data=action.data,
+                target=target_dict,
+            )
+        elif isinstance(action_or_intent, Intent):
+            intent: Intent = action_or_intent
+            _LOGGER.debug("Handling intent: %s", intent)
+            await hass.handle_intent(
+                intent.name,
+                lang_intents.language,
+                data=intent_slots,
+                device_id=device_id,
+                satellite_id=satellite_id,
+            )
 
     # Render speech slots
+    speech_slots: Dict[str, Any] = {}
     for slot_name, slot_template in actions.slot_templates.items():
         speech_slots[slot_name] = _ENV.from_string(slot_template).render(
             speech_slots, **default_vars

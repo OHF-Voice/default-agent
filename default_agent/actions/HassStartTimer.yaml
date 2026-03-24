@@ -1,0 +1,8 @@
+---
+HassStartTimer:
+  match_targets: false
+  actions:
+    - intent: "HassStartTimer"
+      data:
+        seconds: "{{ intent_slots.seconds }}"
+  slots: {}
