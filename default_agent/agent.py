@@ -2,12 +2,15 @@
 
 import itertools
 import logging
+from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 from hassil import RecognizeResult, recognize_best
 from home_assistant_intents import ErrorKey
-from jinja2 import BaseLoader, Environment, StrictUndefined
+from jinja2 import BaseLoader, StrictUndefined
+from jinja2.nativetypes import NativeEnvironment
 from unicode_rbnf import FormatPurpose, RbnfEngine
+
 
 from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
 from .hass_api import HomeAssistant, HomeAssistantError, InfoForRecognition
@@ -19,6 +22,7 @@ from .intents import (
     async_handle_intent,
 )
 from .intents_loader import LanguageIntents
+from .intent_actions import IntentActions
 from .name_matcher import (
     MatchFailedReason,
     MatchTargetsConstraints,
@@ -30,7 +34,7 @@ from .name_matcher import (
 _LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_ERROR_TEXT = "Sorry, I couldn't understand that."
-_ENV = Environment(loader=BaseLoader(), undefined=StrictUndefined)
+_ENV = NativeEnvironment(loader=BaseLoader(), undefined=StrictUndefined)
 
 # language -> engine
 _RNBF_ENGINES: Dict[str, RbnfEngine] = {}
@@ -40,6 +44,7 @@ async def async_converse(
     hass: HomeAssistant,
     text: str,
     lang_intents: LanguageIntents,
+    intent_actions: Dict[str, IntentActions],
     device_id: Optional[str] = None,
     satellite_id: Optional[str] = None,
 ) -> Tuple[bool, str]:
@@ -94,96 +99,126 @@ async def async_converse(
         intent_result.context,
     )
 
-    # TODO: move timers here and take a different path
+    actions = intent_actions.get(intent_result.intent.name)
+    if not actions:
+        # Recognized intent, but no actions/response
+        return (True, "")
 
-    # Match names
-    constraints = MatchTargetsConstraints()
-    name_value = intent_result.entities.get(SLOT_NAME)
-    if name_value is not None:
-        constraints.name = name_value.value
+    speech_slots: Dict[str, Any] = {}
 
-    area_value = intent_result.entities.get(SLOT_AREA)
-    if area_value is not None:
-        constraints.area_name = area_value.value
+    if actions.match_targets:
+        # Match names/areas/floors
+        constraints = MatchTargetsConstraints()
+        name_value = intent_result.entities.get(SLOT_NAME)
+        if name_value is not None:
+            constraints.name = name_value.value
 
-    floor_value = intent_result.entities.get(SLOT_FLOOR)
-    if floor_value is not None:
-        constraints.floor_name = floor_value.value
+        area_value = intent_result.entities.get(SLOT_AREA)
+        if area_value is not None:
+            constraints.area_name = area_value.value
 
-    domain_value = intent_result.entities.get(SLOT_DOMAIN)
-    if domain_value is not None:
-        # Set by intent slot
-        constraints.domains = {domain_value.value}
-    elif "domain" in intent_result.context:
-        # Inferred from context
-        constraints.domains = {intent_result.context["domain"]}
-    else:
-        # Inferred from intent
-        intent_domains = INTENT_DOMAINS.get(intent_result.intent.name)
-        if intent_domains:
-            if isinstance(intent_domains, str):
-                constraints.domains = {intent_domains}
-            else:
-                constraints.domains = intent_domains
+        floor_value = intent_result.entities.get(SLOT_FLOOR)
+        if floor_value is not None:
+            constraints.floor_name = floor_value.value
 
-    # Supported features inferred from intent
-    constraints.features = INTENT_SUPPORTED_FEATURES.get(intent_result.intent.name)
+        domain_value = intent_result.entities.get(SLOT_DOMAIN)
+        if domain_value is not None:
+            # Set by intent slot
+            constraints.domains = {domain_value.value}
+        elif "domain" in intent_result.context:
+            # Inferred from context
+            constraints.domains = {intent_result.context["domain"]}
+        else:
+            # Inferred from intent
+            intent_domains = INTENT_DOMAINS.get(intent_result.intent.name)
+            if intent_domains:
+                if isinstance(intent_domains, str):
+                    constraints.domains = {intent_domains}
+                else:
+                    constraints.domains = intent_domains
 
-    # Required entity states from intent.
-    # We ignore state constraints if an entity is targeted by name.
-    if "name" not in intent_result.entities:
-        required_states = INTENT_STATES.get(intent_result.intent.name)
-        if required_states:
-            if isinstance(required_states, str):
-                constraints.states = {required_states}
-            else:
-                constraints.states = required_states
+        # Supported features inferred from intent
+        constraints.features = INTENT_SUPPORTED_FEATURES.get(intent_result.intent.name)
 
-    # Area/floor preferences (based on where voice satellite is located)
-    preferences: Optional[MatchTargetsPreferences] = None
-    if hass_info.preferred_area_id or hass_info.preferred_floor_id:
-        preferences = MatchTargetsPreferences(
-            area_id=hass_info.preferred_area_id, floor_id=hass_info.preferred_floor_id
-        )
+        # Required entity states from intent.
+        # We ignore state constraints if an entity is targeted by name.
+        if "name" not in intent_result.entities:
+            required_states = INTENT_STATES.get(intent_result.intent.name)
+            if required_states:
+                if isinstance(required_states, str):
+                    constraints.states = {required_states}
+                else:
+                    constraints.states = required_states
 
-    _LOGGER.debug("Constaints: %s", constraints)
-    _LOGGER.debug("Preferences: %s", preferences)
-
-    match_result = async_match_targets(
-        hass_info.states.values(),
-        entities=hass_info.entities,
-        areas=hass_info.areas,
-        floors=hass_info.floors,
-        constraints=constraints,
-        preferences=preferences,
-    )
-
-    _LOGGER.debug("Match result: %s", match_result)
-
-    if not match_result.is_match:
-        error_key, error_data = get_match_error_response(match_result, constraints)
-        error_text = render_error(lang_intents, error_key, error_data)
-        return (False, error_text)
-
-    try:
-        handle_result = await async_handle_intent(
-            hass,
-            intent_result=intent_result,
-            match_result=match_result,
-            hass_info=hass_info,
-            language=lang_intents.language,
-            device_id=device_id,
-            satellite_id=satellite_id,
-        )
-        if handle_result:
-            response_text = render_response(
-                intent_result, handle_result, lang_intents, hass_info
+        # Area/floor preferences (based on where voice satellite is located)
+        preferences: Optional[MatchTargetsPreferences] = None
+        if hass_info.preferred_area_id or hass_info.preferred_floor_id:
+            preferences = MatchTargetsPreferences(
+                area_id=hass_info.preferred_area_id,
+                floor_id=hass_info.preferred_floor_id,
             )
-            return (True, response_text)
-    except HomeAssistantError as err:
-        return (False, str(err))
 
-    return (False, _DEFAULT_ERROR_TEXT)
+        _LOGGER.debug("Constaints: %s", constraints)
+        _LOGGER.debug("Preferences: %s", preferences)
+
+        match_result = async_match_targets(
+            hass_info.states.values(),
+            entities=hass_info.entities,
+            areas=hass_info.areas,
+            floors=hass_info.floors,
+            constraints=constraints,
+            preferences=preferences,
+        )
+
+        _LOGGER.debug("Match result: %s", match_result)
+
+        if not match_result.is_match:
+            error_key, error_data = get_match_error_response(match_result, constraints)
+            error_text = render_error(lang_intents, error_key, error_data)
+            return (False, error_text)
+
+    # TODO: execute actions
+
+    default_vars: Dict[str, Any] = {"now": datetime.now}
+
+    # Render speech slots
+    for slot_name, slot_template in actions.slot_templates.items():
+        speech_slots[slot_name] = _ENV.from_string(slot_template).render(
+            speech_slots, **default_vars
+        )
+
+    response_template = lang_intents.intent_responses.get(
+        intent_result.intent.name, {}
+    ).get(intent_result.response)
+    if not response_template:
+        # No response
+        return (True, "")
+
+    _LOGGER.debug(speech_slots)
+    response_variables: Dict[str, Any] = {"slots": speech_slots, **default_vars}
+
+    response_text = _ENV.from_string(response_template).render(response_variables)
+    return (True, response_text)
+
+    # try:
+    #     handle_result = await async_handle_intent(
+    #         hass,
+    #         intent_result=intent_result,
+    #         match_result=match_result,
+    #         hass_info=hass_info,
+    #         language=lang_intents.language,
+    #         device_id=device_id,
+    #         satellite_id=satellite_id,
+    #     )
+    #     if handle_result:
+    #         response_text = render_response(
+    #             intent_result, handle_result, lang_intents, hass_info
+    #         )
+    #         return (True, response_text)
+    # except HomeAssistantError as err:
+    #     return (False, str(err))
+
+    # return (False, _DEFAULT_ERROR_TEXT)
 
 
 def render_response(

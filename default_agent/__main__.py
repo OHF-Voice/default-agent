@@ -5,8 +5,10 @@ import asyncio
 import logging
 from functools import partial
 from importlib.metadata import version
-from typing import Optional
+from typing import Optional, Dict
+from pathlib import Path
 
+import yaml
 from wyoming.asr import Transcript
 from wyoming.event import Event
 from wyoming.handle import Handled, NotHandled
@@ -16,6 +18,7 @@ from wyoming.server import AsyncEventHandler, AsyncServer
 from .agent import async_converse
 from .hass_api import HomeAssistant
 from .intents_loader import IntentsLoader
+from .intent_actions import IntentActions
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -79,9 +82,19 @@ async def main() -> None:
         disabled_intents=args.disable_intent,
     )
 
+    # TODO: load from custom sentences directories
+    intent_actions = {}
+    actions_dir = Path(__file__).parent / "actions"
+    for actions_path in actions_dir.glob("*.yaml"):
+        with open(actions_path, "r", encoding="utf-8") as actions_file:
+            actions_dict = yaml.safe_load(actions_file)
+
+        intent_name, intent_data = next(iter(actions_dict.items()))
+        intent_actions[intent_name] = IntentActions.from_dict(intent_data)
+
     server = AsyncServer.from_uri(args.uri)
     print("Ready")
-    await server.run(partial(EventHandler, hass, loader, args))
+    await server.run(partial(EventHandler, hass, loader, intent_actions, args))
 
 
 class EventHandler(AsyncEventHandler):
@@ -89,6 +102,7 @@ class EventHandler(AsyncEventHandler):
         self,
         hass: HomeAssistant,
         loader: IntentsLoader,
+        intent_actions: Dict[str, IntentActions],
         cli_args: argparse.Namespace,
         *args,
         **kwargs,
@@ -97,6 +111,7 @@ class EventHandler(AsyncEventHandler):
 
         self.hass = hass
         self.loader = loader
+        self.intent_actions = intent_actions
         self.args = cli_args
 
     async def handle_event(self, event: Event) -> bool:
@@ -175,6 +190,7 @@ class EventHandler(AsyncEventHandler):
                 self.hass,
                 text,
                 lang_intents,
+                self.intent_actions,
                 device_id=device_id,
                 satellite_id=satellite_id,
             )

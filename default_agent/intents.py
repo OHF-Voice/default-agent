@@ -162,6 +162,7 @@ async def async_handle_intent(
         # set light brightness/color
         brightness_value = intent_result.entities.get("brightness")
         color_value = intent_result.entities.get("color")
+        temperature_value = intent_result.entities.get("temperature")
 
         service_data: Dict[str, Any] = {}
         if brightness_value:
@@ -169,6 +170,9 @@ async def async_handle_intent(
 
         if color_value:
             service_data["rgb_color"] = color_name_to_rgb(color_value.value)
+
+        if temperature_value:
+            service_data["color_temp_kelvin"] = int(temperature_value.value)
 
         await hass.trigger_service(
             "light",

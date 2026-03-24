@@ -1,0 +1,6 @@
+---
+HassGetCurrentTime:
+  match_targets: false
+  actions: []  # no actions
+  slots:
+    time: "{{ now() }}"
