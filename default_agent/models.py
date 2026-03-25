@@ -16,9 +16,17 @@ class State:
     state: Any
     attributes: Dict[str, Any] = field(default_factory=dict)
     domain: str = field(init=False)
+    entity_name: Optional[str] = None
 
     def __post_init__(self) -> None:
         self.domain = self.entity_id.split(".", maxsplit=1)[0]
+
+    @property
+    def name(self) -> str:
+        if self.entity_name:
+            return self.entity_name
+
+        return self.entity_id.replace("_", " ")
 
     @property
     def state_with_unit(self) -> Any:

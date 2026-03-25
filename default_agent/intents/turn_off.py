@@ -8,7 +8,6 @@ class TurnOffHandler(IntentHandler):
     async def handle(self, input: HandleInput) -> HandleOutput:
         domain = input.match_domain or "homeassistant"
 
-        # off/close/unlock
         if domain == "cover":
             service = "close_cover"
         elif domain == "valve":

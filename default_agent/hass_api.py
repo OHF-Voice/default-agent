@@ -227,6 +227,8 @@ class HomeAssistant:
 
                     if name:
                         names.append(name)
+                        if state_data:
+                            state_data.entity_name = name
 
                     entities[entity_id] = Entity(
                         entity_id=entity_id,

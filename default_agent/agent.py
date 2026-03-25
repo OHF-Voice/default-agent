@@ -284,9 +284,12 @@ def render_response(
     }
 
     variables["query"] = query
+
+    # The first matched or unmatched entity is available as "state".
     if matched_states:
-        # The first matched or unmatched entity is available as "state".
         variables["state"] = matched_states[0]
+    elif unmatched_states:
+        variables["state"] = unmatched_states[0]
 
     # Try to load engine for transforming numbers into words.
     number_engine = _RNBF_ENGINES.get(lang_intents.language)
