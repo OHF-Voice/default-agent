@@ -326,7 +326,7 @@ class HomeAssistant:
             assert web_response.status == 200
             return await web_response.json()
 
-    async def trigger_service(
+    async def call_service(
         self,
         domain: str,
         service: str,
