@@ -359,6 +359,14 @@ class HomeAssistant:
                 msg = await websocket.receive_json()
                 assert msg["type"] == "auth_ok", msg
 
+                _LOGGER.debug(
+                    "Calling service %s.%s with target=%s, data=%s",
+                    domain,
+                    service,
+                    target,
+                    service_data,
+                )
+
                 await websocket.send_json(
                     {
                         "id": next_id(),

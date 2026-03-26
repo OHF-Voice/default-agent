@@ -66,7 +66,8 @@ def hass_info_fixture() -> InfoForRecognition:
         attributes={
             "supported_features": MediaPlayerEntityFeature.PAUSE
             | MediaPlayerEntityFeature.PLAY
-            | MediaPlayerEntityFeature.VOLUME_SET
+            | MediaPlayerEntityFeature.VOLUME_SET,
+            "volume_level": 0.5,
         },
     )
     media_player_stereo = Entity(
@@ -76,6 +77,7 @@ def hass_info_fixture() -> InfoForRecognition:
         attributes={
             "supported_features": MediaPlayerEntityFeature.NEXT_TRACK
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
+            | MediaPlayerEntityFeature.VOLUME_MUTE
         },
     )
     vacuum_current = Entity(

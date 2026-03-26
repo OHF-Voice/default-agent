@@ -4,6 +4,7 @@ import pytest
 
 from default_agent.util import RGBColor
 
+
 @pytest.mark.asyncio
 async def test_light_set_brightness(async_converse, hass):
     """Test HassLightSet intent with brightness."""
