@@ -5,7 +5,6 @@ import inspect
 import logging
 import pkgutil
 from collections.abc import Iterable
-from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
@@ -17,19 +16,9 @@ from home_assistant_intents import get_intents, get_languages
 import default_agent.intents
 
 from .intent_handler import IntentHandler
+from .models import LanguageIntents
 
 _LOGGER = logging.getLogger(__name__)
-
-
-@dataclass
-class LanguageIntents:
-    """Loaded intents for a language."""
-
-    language: str
-    intents: Intents
-    intents_dict: Dict[str, Any]
-    intent_responses: Dict[str, Any]
-    error_responses: Dict[str, Any]
 
 
 class IntentsLoader:

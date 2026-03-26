@@ -1,7 +1,6 @@
 """Tests for default agent."""
 
-from datetime import datetime
-from typing import Any, Dict
+from typing import Dict
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -10,8 +9,6 @@ from hassil import SlotList, TextSlotList
 from default_agent.agent import async_converse, render_response
 from default_agent.hass_api import InfoForRecognition
 from default_agent.intents_loader import IntentsLoader
-
-_TEST_DATETIME = datetime(year=2013, month=9, day=17, hour=1, minute=2)
 
 
 @pytest.fixture(name="intents_loader", scope="session")
@@ -50,12 +47,15 @@ async def test_async_converse(
     )
     hass = AsyncMock()
     hass.get_info.return_value = hass_info
-    hass.handle_intent.return_value = {
-        "response_type": "query_answer",
-        "speech_slots": {"time": _TEST_DATETIME.time().isoformat()},
-    }
 
-    success, response = await async_converse(hass, "what time is it", lang_intents)
+    with patch("datetime.datetime") as mock_datetime:
+        mock_datetime.now.return_value = TEST_DATETIME
+        success, response = await async_converse(
+            hass,
+            "what time is it",
+            lang_intents=lang_intents,
+            intent_handlers=intents_loader.get_intent_handlers(),
+        )
     assert success, "Intent recognition failed"
     assert response == "1:02 AM"
 
@@ -90,7 +90,12 @@ async def test_async_converse_error(
         },
     }
 
-    success, response = await async_converse(hass, "turn on the lights", lang_intents)
+    success, response = await async_converse(
+        hass,
+        "turn on the lights",
+        lang_intents=lang_intents,
+        intent_handlers={},
+    )
     assert not success
     assert response == "Sorry, I am not aware of any light"
 
@@ -113,13 +118,21 @@ def test_num_to_words(num: int, format_type: str, expected: str) -> None:
     result.response = "default"
     result.entities_list = []
 
-    info = Mock()
-    intent_response: Dict[str, Any] = {}
+    info = InfoForRecognition(
+        slot_lists={},
+        preferred_area_id=None,
+        preferred_area_name=None,
+        preferred_floor_id=None,
+        states={},
+        entities={},
+        areas={},
+        floors={},
+    )
 
     template = f"{{{{ num_to_words({num}, '{format_type}') }}}}"
 
     with patch.object(
         lang_intents, "intent_responses", {"TestIntent": {"default": template}}
     ):
-        response = render_response(result, intent_response, lang_intents, info)
+        response = render_response(result, lang_intents, info)
         assert response == expected

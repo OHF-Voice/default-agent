@@ -5,8 +5,8 @@ class GetStateHandler(IntentHandler):
     intent_type = "HassGetState"
     match_targets = True
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        state_value = input.intent_result.entities.get("state")
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        state_value = handle_input.intent_result.entities.get("state")
         if state_value is None:
             state_names = None
         else:
@@ -19,7 +19,7 @@ class GetStateHandler(IntentHandler):
         matched_states: list = []
         unmatched_states: list = []
 
-        for state in input.target_states:
+        for state in handle_input.target_states:
             if (not state_names) or (state.state in state_names):
                 matched_states.append(state)
             else:

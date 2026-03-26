@@ -7,10 +7,10 @@ class LightSetHandler(IntentHandler):
     match_targets = True
     inferred_domain = "light"
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        brightness_value = input.intent_result.entities.get("brightness")
-        color_value = input.intent_result.entities.get("color")
-        temperature_value = input.intent_result.entities.get("temperature")
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        brightness_value = handle_input.intent_result.entities.get("brightness")
+        color_value = handle_input.intent_result.entities.get("color")
+        temperature_value = handle_input.intent_result.entities.get("temperature")
 
         service_data: dict = {}
         if brightness_value:
@@ -22,11 +22,11 @@ class LightSetHandler(IntentHandler):
         if temperature_value:
             service_data["color_temp_kelvin"] = int(temperature_value.value)
 
-        await input.hass.call_service(
+        await handle_input.hass.call_service(
             "light",
             "turn_on",
             service_data=service_data,
-            target={"entity_id": input.target_entity_ids},
+            target={"entity_id": handle_input.target_entity_ids},
         )
 
         return HandleOutput(success=True)

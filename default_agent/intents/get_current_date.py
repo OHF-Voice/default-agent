@@ -7,5 +7,5 @@ class GetCurrentDateHandler(IntentHandler):
     intent_type = "HassGetCurrentDate"
     match_targets = False
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
         return HandleOutput(success=True, response_vars={"date": datetime.now()})

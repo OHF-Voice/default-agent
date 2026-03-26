@@ -18,14 +18,14 @@ class FanSetSpeedHandler(IntentHandler):
     inferred_domain = "fan"
     required_features = FanEntityFeature.SET_SPEED
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        percentage = int(input.intent_result.entities["percentage"].value)
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        percentage = int(handle_input.intent_result.entities["percentage"].value)
 
-        await input.hass.call_service(
+        await handle_input.hass.call_service(
             "fan",
             "set_percentage",
             service_data={"percentage": percentage},
-            target={"entity_id": input.target_entity_ids},
+            target={"entity_id": handle_input.target_entity_ids},
         )
 
         return HandleOutput(success=True)

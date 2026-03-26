@@ -6,5 +6,5 @@ class GetWeatherHandler(IntentHandler):
     match_targets = True
     inferred_domain = "weather"
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
         return HandleOutput(success=True)

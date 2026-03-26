@@ -35,10 +35,10 @@ class SetVolumeRelativeHandler(IntentHandler):
     required_states = "playing"
     required_features = MediaPlayerEntityFeature.VOLUME_SET
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        volume_step = input.intent_result.entities["volume_step"].value
-        for entity_id in input.target_entity_ids:
-            state = input.hass_info.states.get(entity_id)
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        volume_step = handle_input.intent_result.entities["volume_step"].value
+        for entity_id in handle_input.target_entity_ids:
+            state = handle_input.hass_info.states.get(entity_id)
             if state is None:
                 continue
 
@@ -55,7 +55,7 @@ class SetVolumeRelativeHandler(IntentHandler):
 
             volume_level = max(0, min(1, volume_level))
 
-            await input.hass.call_service(
+            await handle_input.hass.call_service(
                 "media_player",
                 "volume_set",
                 service_data={"volume_level": volume_level},

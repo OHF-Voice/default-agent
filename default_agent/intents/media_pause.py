@@ -35,9 +35,11 @@ class MediaPauseHandler(IntentHandler):
     required_states = "playing"
     required_features = MediaPlayerEntityFeature.PAUSE
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        await input.hass.call_service(
-            "media_player", "media_pause", target={"entity_id": input.target_entity_ids}
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        await handle_input.hass.call_service(
+            "media_player",
+            "media_pause",
+            target={"entity_id": handle_input.target_entity_ids},
         )
 
         return HandleOutput(success=True)

@@ -35,15 +35,17 @@ class SetVolumeHandler(IntentHandler):
     required_states = "playing"
     required_features = MediaPlayerEntityFeature.VOLUME_SET
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        volume_level = float(input.intent_result.entities["volume_level"].value) / 100
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        volume_level = (
+            float(handle_input.intent_result.entities["volume_level"].value) / 100
+        )
         volume_level = max(0, min(1, volume_level))
 
-        await input.hass.call_service(
+        await handle_input.hass.call_service(
             "media_player",
             "volume_set",
             service_data={"volume_level": volume_level},
-            target={"entity_id": input.target_entity_ids},
+            target={"entity_id": handle_input.target_entity_ids},
         )
 
         return HandleOutput(success=True)

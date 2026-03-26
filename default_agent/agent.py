@@ -9,12 +9,11 @@ from jinja2 import BaseLoader, StrictUndefined
 from jinja2.nativetypes import NativeEnvironment
 from unicode_rbnf import FormatPurpose, RbnfEngine
 
-from default_agent.models import State
+from default_agent.models import LanguageIntents, State
 
 from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
 from .hass_api import HomeAssistant, InfoForRecognition
 from .intent_handler import HandleInput, IntentHandler
-from .intents_loader import LanguageIntents
 from .name_matcher import (
     MatchFailedReason,
     MatchTargetsConstraints,
@@ -33,8 +32,9 @@ _RNBF_ENGINES: Dict[str, RbnfEngine] = {}
 
 
 async def async_converse(
-    hass: HomeAssistant,
     text: str,
+    *,
+    hass: HomeAssistant,
     lang_intents: LanguageIntents,
     intent_handlers: Dict[str, IntentHandler],
     device_id: Optional[str] = None,

@@ -12,7 +12,7 @@ from hassil import RecognizeResult
 from jinja2 import Environment
 
 from .hass_api import HomeAssistant, InfoForRecognition, State
-from .intents_loader import LanguageIntents
+from .models import LanguageIntents
 from .name_matcher import (
     MatchTargetsConstraints,
     MatchTargetsPreferences,
@@ -71,7 +71,7 @@ class IntentHandler:
                 raise TypeError(f"{cls.__name__} must define {attr_name}")
 
     @abstractmethod
-    async def handle(self, input: HandleInput) -> HandleOutput:
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
         pass
 
 

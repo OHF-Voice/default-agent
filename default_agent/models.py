@@ -91,3 +91,14 @@ class Floor:
     floor_id: str
     name: str
     aliases: Optional[List[str]] = None
+
+
+@dataclass
+class LanguageIntents:
+    """Loaded intents for a language."""
+
+    language: str
+    intents: Any
+    intents_dict: Dict[str, Any]
+    intent_responses: Dict[str, Any]
+    error_responses: Dict[str, Any]

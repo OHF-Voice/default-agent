@@ -5,8 +5,8 @@ class TurnOnHandler(IntentHandler):
     intent_type = "HassTurnOn"
     match_targets = True
 
-    async def handle(self, input: HandleInput) -> HandleOutput:
-        domain = input.match_domain or "homeassistant"
+    async def handle(self, handle_input: HandleInput) -> HandleOutput:
+        domain = handle_input.match_domain or "homeassistant"
 
         # on/open/lock
         if domain == "cover":
@@ -18,8 +18,8 @@ class TurnOnHandler(IntentHandler):
         else:
             service = "turn_on"
 
-        await input.hass.call_service(
-            domain, service, target={"entity_id": input.target_entity_ids}
+        await handle_input.hass.call_service(
+            domain, service, target={"entity_id": handle_input.target_entity_ids}
         )
 
         return HandleOutput(success=True)
