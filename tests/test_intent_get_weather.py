@@ -4,8 +4,8 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_get_weather(async_converse, hass):
+async def test_get_weather(async_converse):
     """Test HassGetWeather intent."""
     success, response = await async_converse("what's the weather")
     assert success, "Intent recognition failed"
-    assert response == ""
+    assert response == "72 F and sunny"

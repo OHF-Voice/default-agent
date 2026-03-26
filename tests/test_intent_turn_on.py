@@ -53,3 +53,16 @@ async def test_turn_on_name(async_converse, hass):
         "turn_on",
         target={"entity_id": ["light.no_area_light"]},
     )
+
+
+@pytest.mark.asyncio
+async def test_open_name(async_converse, hass):
+    """Test HassTurnOn intent with cover."""
+    success, response = await async_converse("open smart window")
+    assert success, "Intent recognition failed"
+    assert response == "Opening"
+    hass.call_service.assert_called_once_with(
+        "cover",
+        "open_cover",
+        target={"entity_id": ["cover.current_window"]},
+    )

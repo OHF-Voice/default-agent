@@ -55,7 +55,7 @@ def hass_info_fixture() -> InfoForRecognition:
     )
     fan_current = Entity(
         "fan.current_fan",
-        "Current Fan",
+        "Smart Fan",
         area_id=current_area.area_id,
         attributes={"supported_features": FanEntityFeature.SET_SPEED},
     )
@@ -86,11 +86,17 @@ def hass_info_fixture() -> InfoForRecognition:
         area_id=current_area.area_id,
         attributes={"supported_features": VacuumEntityFeature.START},
     )
-    cover_current = Entity(
-        "cover.current_cover",
-        "Current Cover",
+    window_current = Entity(
+        "cover.current_window",
+        "Smart Window",
         area_id=current_area.area_id,
     )
+    weather_home = Entity(
+        "weather.home",
+        "Home Weather",
+        attributes={"temperature": 72, "temperature_unit": "F"},
+    )
+    todo_list = Entity("todo.list", "Todo List")
 
     floors = [first_floor]
     areas = [current_area, other_area]
@@ -103,7 +109,9 @@ def hass_info_fixture() -> InfoForRecognition:
         media_player_tv,
         media_player_stereo,
         vacuum_current,
-        cover_current,
+        window_current,
+        weather_home,
+        todo_list,
     ]
     states = [
         to_state(light_current_area, "on"),
@@ -117,7 +125,9 @@ def hass_info_fixture() -> InfoForRecognition:
         to_state(media_player_tv, "playing"),
         to_state(media_player_stereo, "playing"),
         to_state(vacuum_current, "cleaning"),
-        to_state(cover_current, "closed"),
+        to_state(window_current, "closed"),
+        to_state(weather_home, "sunny"),
+        to_state(todo_list, ""),
     ]
 
     slot_lists: Dict[str, SlotList] = {
