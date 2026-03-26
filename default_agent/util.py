@@ -240,3 +240,17 @@ class FanEntityFeature(IntFlag):
     PRESET_MODE = 8
     TURN_OFF = 16
     TURN_ON = 32
+
+
+class ClimateEntityFeature(IntFlag):
+    """Supported features of the climate entity."""
+
+    TARGET_TEMPERATURE = 1
+    TARGET_TEMPERATURE_RANGE = 2
+    TARGET_HUMIDITY = 4
+    FAN_MODE = 8
+    PRESET_MODE = 16
+    SWING_MODE = 32
+    TURN_OFF = 128
+    TURN_ON = 256
+    SWING_HORIZONTAL_MODE = 512

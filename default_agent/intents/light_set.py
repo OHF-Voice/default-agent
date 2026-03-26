@@ -7,6 +7,10 @@ class LightSetHandler(IntentHandler):
     match_targets = True
     inferred_domain = "light"
 
+    # We don't have required_features here because of light groups.
+    # If some or all of the lights in the group support color/brightness, it
+    # doesn't mean the light group itself will have the supported feature(s).
+
     async def handle(self, handle_input: HandleInput) -> HandleOutput:
         brightness_value = handle_input.intent_result.entities.get("brightness")
         color_value = handle_input.intent_result.entities.get("color")

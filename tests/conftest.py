@@ -11,6 +11,12 @@ from default_agent.agent import async_converse as agent_async_converse
 from default_agent.hass_api import InfoForRecognition
 from default_agent.intents_loader import IntentsLoader
 from default_agent.models import Area, Entity, Floor, LanguageIntents, State
+from default_agent.util import (
+    ClimateEntityFeature,
+    FanEntityFeature,
+    MediaPlayerEntityFeature,
+    VacuumEntityFeature,
+)
 
 TEST_DATETIME = datetime(year=2013, month=9, day=17, hour=1, minute=2)
 
@@ -41,10 +47,62 @@ def hass_info_fixture() -> InfoForRecognition:
     )
     light_no_area = Entity("light.no_area_light", "No Area Light")
     switch_no_area = Entity("switch.no_area_switch", "No Area Switch")
+    climate_thermostat = Entity(
+        "climate.thermostat",
+        "Thermostat",
+        area_id=current_area.area_id,
+        attributes={"supported_features": ClimateEntityFeature.TARGET_TEMPERATURE},
+    )
+    fan_current = Entity(
+        "fan.current_fan",
+        "Current Fan",
+        area_id=current_area.area_id,
+        attributes={"supported_features": FanEntityFeature.SET_SPEED},
+    )
+    media_player_tv = Entity(
+        "media_player.tv",
+        "TV",
+        area_id=current_area.area_id,
+        attributes={
+            "supported_features": MediaPlayerEntityFeature.PAUSE
+            | MediaPlayerEntityFeature.PLAY
+            | MediaPlayerEntityFeature.VOLUME_SET
+        },
+    )
+    media_player_stereo = Entity(
+        "media_player.stereo",
+        "Stereo",
+        area_id=current_area.area_id,
+        attributes={
+            "supported_features": MediaPlayerEntityFeature.NEXT_TRACK
+            | MediaPlayerEntityFeature.PREVIOUS_TRACK
+        },
+    )
+    vacuum_current = Entity(
+        "vacuum.current_vacuum",
+        "Current Vacuum",
+        area_id=current_area.area_id,
+        attributes={"supported_features": VacuumEntityFeature.START},
+    )
+    cover_current = Entity(
+        "cover.current_cover",
+        "Current Cover",
+        area_id=current_area.area_id,
+    )
 
     floors = [first_floor]
     areas = [current_area, other_area]
-    entities = [light_current_area, light_other_area, light_no_area]
+    entities = [
+        light_current_area,
+        light_other_area,
+        light_no_area,
+        climate_thermostat,
+        fan_current,
+        media_player_tv,
+        media_player_stereo,
+        vacuum_current,
+        cover_current,
+    ]
     states = [
         to_state(light_current_area, "on"),
         to_state(light_other_area, "off"),
@@ -52,6 +110,12 @@ def hass_info_fixture() -> InfoForRecognition:
         to_state(switch_current_area, "on"),
         to_state(switch_other_area, "off"),
         to_state(switch_no_area, "on"),
+        to_state(climate_thermostat, "auto"),
+        to_state(fan_current, "on"),
+        to_state(media_player_tv, "playing"),
+        to_state(media_player_stereo, "playing"),
+        to_state(vacuum_current, "cleaning"),
+        to_state(cover_current, "closed"),
     ]
 
     slot_lists: Dict[str, SlotList] = {
