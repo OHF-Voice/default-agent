@@ -3,13 +3,13 @@
 from collections.abc import Awaitable, Callable
 from functools import partial
 from typing import Dict, Tuple, Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from hassil import SlotList, TextSlotList
 
 from default_agent.agent import async_converse as agent_async_converse
-from default_agent.hass_api import InfoForRecognition
+from default_agent.hass_api import HomeAssistant, InfoForRecognition
 from default_agent.models import Area, Floor, Entity, State
 from default_agent.intents_loader import IntentsLoader
 
@@ -24,8 +24,8 @@ def to_state(entity: Entity, state: Any) -> State:
     )
 
 
-@pytest.fixture(name="async_converse", scope="session")
-def async_converse_fixture() -> CONVERSE_TYPE:
+@pytest.fixture(name="hass", scope="session")
+def hass_fixture() -> MagicMock:
     current_floor = Floor("current-floor", "Current Floor")
     current_area = Area("current-area", "Current Area", floor_id=current_floor.floor_id)
     other_area = Area("other-area", "Other Area")
@@ -69,6 +69,11 @@ def async_converse_fixture() -> CONVERSE_TYPE:
     hass = AsyncMock()
     hass.get_info.return_value = hass_info
 
+    return hass
+
+
+@pytest.fixture(name="async_converse", scope="session")
+def async_converse_fixture(hass: HomeAssistant) -> CONVERSE_TYPE:
     intents_loader = IntentsLoader()
     lang_intents = intents_loader.get_intents("en")
     assert lang_intents is not None, "No English intents"
@@ -102,8 +107,15 @@ async def test_get_date(async_converse: CONVERSE_TYPE):
 
 
 @pytest.mark.asyncio
-async def test_turn_on_lights_current_area(async_converse: CONVERSE_TYPE):
+async def test_turn_on_lights_current_area(
+    async_converse: CONVERSE_TYPE, hass: MagicMock
+):
     """Test HassTurnOn intent with lights in the current area."""
     success, response = await async_converse("turn on the lights")
     assert success, "Intent recognition failed"
     assert response == "Turned on the lights"
+    hass.call_service.assert_called_once_with(
+        "light",
+        "turn_on",
+        target={"entity_id": ["light.light_current_area"]},
+    )
