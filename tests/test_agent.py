@@ -12,7 +12,6 @@ from default_agent.intents_loader import IntentsLoader
 
 from .conftest import TEST_DATETIME
 
-
 # @pytest.fixture(name="intents_loader", scope="session")
 # def intents_loader_fixture() -> IntentsLoader:
 #     """Intents loader."""

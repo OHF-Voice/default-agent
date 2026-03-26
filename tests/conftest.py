@@ -23,21 +23,36 @@ def to_state(entity: Entity, state: Any) -> State:
 
 @pytest.fixture(name="hass_info", scope="session")
 def hass_info_fixture() -> InfoForRecognition:
-    current_floor = Floor("current-floor", "Current Floor")
-    current_area = Area("current-area", "Current Area", floor_id=current_floor.floor_id)
-    other_area = Area("other-area", "Other Area")
+    first_floor = Floor("first-floor", "First Floor")
+    current_area = Area("current-area", "Current Area", floor_id=first_floor.floor_id)
+    other_area = Area("other-area", "Other Area", floor_id=first_floor.floor_id)
 
     light_current_area = Entity(
-        "light.light_current_area", "Light Current Area", area_id=current_area.area_id
+        "light.current_light", "Current Light", area_id=current_area.area_id
+    )
+    switch_current_area = Entity(
+        "switch.current_light", "Current Switch", area_id=current_area.area_id
     )
     light_other_area = Entity(
-        "light.light_other_area", "Light Other Area", area_id=other_area.area_id
+        "light.other_light", "Other Light", area_id=other_area.area_id
     )
+    switch_other_area = Entity(
+        "switch.other_switch", "Other Switch", area_id=other_area.area_id
+    )
+    light_no_area = Entity("light.no_area_light", "No Area Light")
+    switch_no_area = Entity("switch.no_area_switch", "No Area Switch")
 
-    floors = [current_floor]
+    floors = [first_floor]
     areas = [current_area, other_area]
-    entities = [light_current_area, light_other_area]
-    states = [to_state(light_current_area, "on")]
+    entities = [light_current_area, light_other_area, light_no_area]
+    states = [
+        to_state(light_current_area, "on"),
+        to_state(light_other_area, "off"),
+        to_state(light_no_area, "on"),
+        to_state(switch_current_area, "on"),
+        to_state(switch_other_area, "off"),
+        to_state(switch_no_area, "on"),
+    ]
 
     slot_lists: Dict[str, SlotList] = {
         "name": TextSlotList.from_tuples(
@@ -57,7 +72,7 @@ def hass_info_fixture() -> InfoForRecognition:
         slot_lists=slot_lists,
         preferred_area_id=current_area.area_id,
         preferred_area_name=current_area.name,
-        preferred_floor_id=current_floor.floor_id,
+        preferred_floor_id=first_floor.floor_id,
         states={s.entity_id: s for s in states},
         entities={e.entity_id: e for e in entities},
         areas={a.area_id: a for a in areas},
