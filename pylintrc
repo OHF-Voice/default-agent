@@ -1,5 +1,4 @@
 [MASTER]
-ignored-modules=torch,transformers
 
 [MESSAGES CONTROL]
 disable=
@@ -34,7 +33,9 @@ disable=
   missing-class-docstring,
   missing-function-docstring,
   import-error,
-  relative-beyond-top-level
+  relative-beyond-top-level,
+  too-many-positional-arguments,
+  too-many-function-args
 
 [FORMAT]
 expected-line-ending-format=LF

@@ -172,10 +172,10 @@ class EventHandler(AsyncEventHandler):
             # 3. Use the result from Home Assistant and response template to
             #    generate a text response
             is_handled, response_text = await async_converse(
-                self.hass,
                 text,
-                lang_intents,
-                self.loader.get_intent_handlers(),
+                hass=self.hass,
+                lang_intents=lang_intents,
+                intent_handlers=self.loader.get_intent_handlers(),
                 device_id=device_id,
                 satellite_id=satellite_id,
             )

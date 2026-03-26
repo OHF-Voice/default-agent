@@ -106,6 +106,7 @@ async def test_unexposed_and_disabled_entities() -> None:
             ),
             ("config/floor_registry/list", {"result": []}),
             ("config/area_registry/list", {"result": []}),
+            ("config/device_registry/list", {"result": []}),
             (
                 "config/entity_registry/get_entries",
                 {
@@ -118,7 +119,6 @@ async def test_unexposed_and_disabled_entities() -> None:
                 },
                 {"entity_ids": ["light.disabled_light"]},
             ),
-            ("config/device_registry/list", {"result": []}),
         ]
     )
 
