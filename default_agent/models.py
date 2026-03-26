@@ -30,7 +30,9 @@ class State:
 
     @property
     def state_with_unit(self) -> Any:
-        # TODO: where to get unit?
+        unit = self.attributes.get("unit_of_measurement")
+        if unit:
+            return f"{self.state} {unit}"
         return self.state
 
 

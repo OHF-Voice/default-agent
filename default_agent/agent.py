@@ -218,6 +218,7 @@ async def async_converse(
         match_preferences=match_preferences,
     )
 
+    _LOGGER.debug("Handling intent %s with handler: %s", intent_name, intent_handler)
     handle_output = await intent_handler.handle(handle_input)
     _LOGGER.debug(handle_output)
 

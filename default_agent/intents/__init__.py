@@ -4,6 +4,7 @@ from . import get_current_time
 from . import get_current_date
 from . import get_weather
 from . import get_state
+from . import set_temperature
 from . import set_position
 from . import light_set
 from . import list_add_item
@@ -23,3 +24,6 @@ from . import set_volume_relative
 from . import fan_set_speed
 from . import start_timer
 from . import nevermind
+from . import hass_shopping_list_add_item
+from . import hass_shopping_list_complete_item
+from . import hass_shopping_list_remove_item
