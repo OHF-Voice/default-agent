@@ -93,10 +93,10 @@ async def async_converse(
         intent_result.context,
     )
 
-    intent_handler = intent_handlers.get(intent_result.intent.name)
+    intent_handler = intent_handlers.get(intent_name)
     if intent_handler is None:
-        # TODO: render default response
         # Recognized intent, but no handler
+        _LOGGER.warning("No intent handler found for %s", intent_name)
         response_text = render_response(intent_result, lang_intents, hass_info)
         return (True, response_text)
 
@@ -234,7 +234,7 @@ async def async_converse(
 def render_response(
     intent_result: RecognizeResult,
     lang_intents: LanguageIntents,
-    info: InfoForRecognition,
+    hass_info: InfoForRecognition,
     matched_states: Optional[List[State]] = None,
     unmatched_states: Optional[List[State]] = None,
     response_vars: Optional[Dict[str, Any]] = None,
@@ -257,8 +257,16 @@ def render_response(
     if response_vars:
         slots.update(response_vars)
 
+    # Patch area name for responses.
+    # We use area_id in the intent handlers for Home Assistant service calls,
+    # but the responses need to render the area name instead.
+    if "area" in slots:
+        area_value = slots["area"]
+        if area_value in hass_info.areas:
+            slots["area"] = hass_info.areas[area_value].name
+
     def state_attr(entity_id: str, attr_name: str) -> Any:
-        state = info.states.get(entity_id)
+        state = hass_info.states.get(entity_id)
         if state is None:
             return None
 

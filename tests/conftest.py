@@ -11,7 +11,7 @@ from default_agent.agent import async_converse as agent_async_converse
 from default_agent.hass_api import InfoForRecognition
 from default_agent.intents_loader import IntentsLoader
 from default_agent.models import Area, Entity, Floor, LanguageIntents, State
-from default_agent.util import (
+from default_agent.const import (
     ClimateEntityFeature,
     FanEntityFeature,
     MediaPlayerEntityFeature,
@@ -82,9 +82,13 @@ def hass_info_fixture() -> InfoForRecognition:
     )
     vacuum_current = Entity(
         "vacuum.current_vacuum",
-        "Current Vacuum",
+        "Smart Vacuum",
         area_id=current_area.area_id,
-        attributes={"supported_features": VacuumEntityFeature.START},
+        attributes={
+            "supported_features": VacuumEntityFeature.START
+            | VacuumEntityFeature.RETURN_HOME
+            | VacuumEntityFeature.CLEAN_AREA
+        },
     )
     window_current = Entity(
         "cover.current_window",

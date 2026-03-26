@@ -1,18 +1,5 @@
-from enum import IntFlag
-
+from ..const import ClimateEntityFeature
 from ..intent_handler import HandleInput, HandleOutput, IntentHandler
-
-
-class ClimateEntityFeature(IntFlag):
-    TARGET_TEMPERATURE = 1
-    TARGET_TEMPERATURE_RANGE = 2
-    TARGET_HUMIDITY = 4
-    FAN_MODE = 8
-    PRESET_MODE = 16
-    SWING_MODE = 32
-    TURN_OFF = 128
-    TURN_ON = 256
-    SWING_HORIZONTAL_MODE = 512
 
 
 class SetTemperatureHandler(IntentHandler):
@@ -23,7 +10,6 @@ class SetTemperatureHandler(IntentHandler):
 
     async def handle(self, handle_input: HandleInput) -> HandleOutput:
         temperature = float(handle_input.intent_result.entities["temperature"].value)
-
         await handle_input.hass.call_service(
             "climate",
             "set_temperature",

@@ -8,6 +8,7 @@ async def test_shopping_list_add_item(async_converse, hass):
     """Test HassShoppingListAddItem intent."""
     success, response = await async_converse("add milk to shopping list")
     assert success, "Intent recognition failed"
+    assert response == "Added milk"
     hass.call_service.assert_called_once_with(
         "shopping_list",
         "add_item",
