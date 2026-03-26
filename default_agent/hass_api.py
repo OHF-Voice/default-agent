@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
 
 import aiohttp
-from hassil import RecognizeResult
 from hassil.expression import TextChunk
 from hassil.intents import SlotList, TextSlotList, TextSlotValue
 

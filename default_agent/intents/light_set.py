@@ -1,4 +1,4 @@
-from ..intent_handler import IntentHandler, HandleInput, HandleOutput
+from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 from ..util import color_name_to_rgb
 
 

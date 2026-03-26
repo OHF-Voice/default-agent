@@ -1,23 +1,22 @@
-from abc import abstractmethod
-from dataclasses import dataclass
-from typing import Any, Dict, ClassVar, Optional, List, Type, Union
-from collections.abc import Collection
-import pkgutil
 import importlib
 import inspect
 import logging
+import pkgutil
+from abc import abstractmethod
+from collections.abc import Collection
+from dataclasses import dataclass
 from types import ModuleType
-from typing import Iterator
+from typing import Any, ClassVar, Dict, Iterator, List, Optional, Type, Union
 
 from hassil import RecognizeResult
 from jinja2 import Environment
 
-from .intents_loader import LanguageIntents
 from .hass_api import HomeAssistant, InfoForRecognition, State
+from .intents_loader import LanguageIntents
 from .name_matcher import (
-    MatchTargetsResult,
     MatchTargetsConstraints,
     MatchTargetsPreferences,
+    MatchTargetsResult,
 )
 
 _LOGGER = logging.getLogger(__name__)

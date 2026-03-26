@@ -1,5 +1,6 @@
-from ..intent_handler import IntentHandler, HandleInput, HandleOutput
 from enum import IntFlag
+
+from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 
 
 class MediaPlayerEntityFeature(IntFlag):

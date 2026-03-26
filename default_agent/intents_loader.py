@@ -1,14 +1,22 @@
 """Loader for HassIL intents."""
 
+import importlib
+import inspect
 import logging
+import pkgutil
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from types import ModuleType
+from typing import Any, Dict, Iterator, List, Optional, Type, Union
 
 import yaml
 from hassil import Intents, merge_dict
 from home_assistant_intents import get_intents, get_languages
+
+import default_agent.intents
+
+from .intent_handler import IntentHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +44,7 @@ class IntentsLoader:
         self.lang_map: Dict[str, str] = {}
         self.load_builtin_intents = load_builtin_intents
         self.disabled_intents = disabled_intents or []
+        self._intent_handlers: Optional[Dict[str, IntentHandler]] = None
 
         self.intents_repo_dir: Optional[Path] = None
         if intents_repo_dir:
@@ -202,3 +211,64 @@ class IntentsLoader:
                     self.lang_map.setdefault(lang, lang)
 
         _LOGGER.debug("Supported languages: %s", sorted(self.lang_map.keys()))
+
+    def get_intent_handlers(
+        self,
+    ) -> Dict[str, IntentHandler]:
+        """Find all intent handler subclasses in default_agent.intents (loaded once)."""
+        if self._intent_handlers is not None:
+            return self._intent_handlers
+
+        handlers_dict: Dict[str, IntentHandler] = {}
+        for handle_type in find_intent_handlers(default_agent.intents):
+            _LOGGER.debug(
+                "Loaded intent handler: %s for %s",
+                handle_type,
+                handle_type.intent_type,
+            )
+            handlers_dict[handle_type.intent_type] = handle_type()
+
+        self._intent_handlers = handlers_dict
+        return self._intent_handlers
+
+
+def find_intent_handlers(
+    package: ModuleType,
+) -> List[Type[IntentHandler]]:
+    """
+    Find all subclasses of `base_class` inside `package`.
+    """
+
+    subclasses: List[Type[IntentHandler]] = []
+    for module in _iter_submodules(package):
+        for _, obj in inspect.getmembers(module, inspect.isclass):
+            # Ensure:
+            # - subclass of base_class
+            # - not the base class itself
+            # - defined in this module (not imported)
+            if (
+                issubclass(obj, IntentHandler)
+                and obj is not IntentHandler
+                and obj.__module__ == module.__name__
+            ):
+                subclasses.append(obj)
+
+    return subclasses
+
+
+def _iter_submodules(module: ModuleType) -> Iterator[ModuleType]:
+    """
+    Yield the given module, plus any submodules if it is a package.
+    """
+    yield module
+
+    module_path = getattr(module, "__path__", None)
+    if module_path is None:
+        return
+
+    prefix = module.__name__ + "."
+    for module_info in pkgutil.walk_packages(module_path, prefix):
+        try:
+            yield importlib.import_module(module_info.name)
+        except Exception as err:
+            _LOGGER.error("Failed to import %s: %s", module_info.name, err)

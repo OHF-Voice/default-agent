@@ -1,8 +1,7 @@
 """Default agent implementation."""
 
 import logging
-from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from hassil import RecognizeResult, recognize_best
 from home_assistant_intents import ErrorKey
@@ -13,16 +12,9 @@ from unicode_rbnf import FormatPurpose, RbnfEngine
 from default_agent.models import State
 
 from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
-from .hass_api import HomeAssistant, HomeAssistantError, InfoForRecognition
-
-# from .intents import (
-#     INTENT_DOMAINS,
-#     INTENT_STATES,
-#     INTENT_SUPPORTED_FEATURES,
-#     IntentHandledResult,
-# )
+from .hass_api import HomeAssistant, InfoForRecognition
+from .intent_handler import HandleInput, IntentHandler
 from .intents_loader import LanguageIntents
-from .intent_handler import HandleInput, find_intent_handlers, IntentHandler
 from .name_matcher import (
     MatchFailedReason,
     MatchTargetsConstraints,

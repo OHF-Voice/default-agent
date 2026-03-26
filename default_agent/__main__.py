@@ -5,7 +5,7 @@ import asyncio
 import logging
 from functools import partial
 from importlib.metadata import version
-from typing import Optional, Dict
+from typing import Optional
 
 from wyoming.asr import Transcript
 from wyoming.event import Event
@@ -13,11 +13,9 @@ from wyoming.handle import Handled, NotHandled
 from wyoming.info import Attribution, Describe, HandleModel, HandleProgram, Info
 from wyoming.server import AsyncEventHandler, AsyncServer
 
-import default_agent.intents
 from .agent import async_converse
 from .hass_api import HomeAssistant
 from .intents_loader import IntentsLoader
-from .intent_handler import find_intent_handlers, IntentHandler
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,17 +79,9 @@ async def main() -> None:
         disabled_intents=args.disable_intent,
     )
 
-    # TODO: load from custom sentences directories
-    intent_handlers: Dict[str, IntentHandler] = {}
-    for handle_type in find_intent_handlers(default_agent.intents):
-        _LOGGER.debug(
-            "Loaded intent handler: %s for %s", handle_type, handle_type.intent_type
-        )
-        intent_handlers[handle_type.intent_type] = handle_type()
-
     server = AsyncServer.from_uri(args.uri)
     _LOGGER.info("Ready")
-    await server.run(partial(EventHandler, hass, loader, intent_handlers, args))
+    await server.run(partial(EventHandler, hass, loader, args))
 
 
 class EventHandler(AsyncEventHandler):
@@ -99,7 +89,6 @@ class EventHandler(AsyncEventHandler):
         self,
         hass: HomeAssistant,
         loader: IntentsLoader,
-        intent_handlers: Dict[str, IntentHandler],
         cli_args: argparse.Namespace,
         *args,
         **kwargs,
@@ -108,7 +97,6 @@ class EventHandler(AsyncEventHandler):
 
         self.hass = hass
         self.loader = loader
-        self.intent_handlers = intent_handlers
         self.args = cli_args
 
     async def handle_event(self, event: Event) -> bool:
@@ -187,7 +175,7 @@ class EventHandler(AsyncEventHandler):
                 self.hass,
                 text,
                 lang_intents,
-                self.intent_handlers,
+                self.loader.get_intent_handlers(),
                 device_id=device_id,
                 satellite_id=satellite_id,
             )

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from ..intent_handler import IntentHandler, HandleInput, HandleOutput
+from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 
 
 class GetCurrentDateHandler(IntentHandler):

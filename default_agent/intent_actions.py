@@ -1,8 +1,8 @@
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Union, Any
-from jinja2 import Environment
 import re
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
 
+from jinja2 import Environment
 
 _TEMPLATE_PATTERN = re.compile(r"{{|{%|{#")
 
@@ -58,7 +58,9 @@ class IntentActions:
             slot_templates=data["slots"],
         )
 
-    def evaluate_actions(self, env: Environment, variables: Dict[str, Any]) -> List[Union[Action, Intent]]:
+    def evaluate_actions(
+        self, env: Environment, variables: Dict[str, Any]
+    ) -> List[Union[Action, Intent]]:
         result: List[Union[Action, Intent]] = []
         for action in self.actions:
             if isinstance(action, Action):
@@ -79,9 +81,13 @@ class IntentActions:
                     if template.render(**variables):
                         for seq_action in action.sequence.actions:
                             if isinstance(seq_action, Action):
-                                result.append(self._evaluate_action(seq_action, env, variables))
+                                result.append(
+                                    self._evaluate_action(seq_action, env, variables)
+                                )
                             elif isinstance(seq_action, Intent):
-                                result.append(self._evaluate_intent(seq_action, env, variables))
+                                result.append(
+                                    self._evaluate_intent(seq_action, env, variables)
+                                )
                             else:
                                 result.append(seq_action)
                         break
@@ -89,14 +95,20 @@ class IntentActions:
                     if action.default:
                         for seq_action in action.default.actions:
                             if isinstance(seq_action, Action):
-                                result.append(self._evaluate_action(seq_action, env, variables))
+                                result.append(
+                                    self._evaluate_action(seq_action, env, variables)
+                                )
                             elif isinstance(seq_action, Intent):
-                                result.append(self._evaluate_intent(seq_action, env, variables))
+                                result.append(
+                                    self._evaluate_intent(seq_action, env, variables)
+                                )
                             else:
                                 result.append(seq_action)
         return result
 
-    def _evaluate_intent(self, intent: Intent, env: Environment, variables: Dict[str, Any]) -> Intent:
+    def _evaluate_intent(
+        self, intent: Intent, env: Environment, variables: Dict[str, Any]
+    ) -> Intent:
         name = self._render_if_template(intent.name, env, variables)
         data = None
         if intent.data:
@@ -105,25 +117,31 @@ class IntentActions:
                 data[key] = self._render_if_template(value, env, variables)
         return Intent(name=name, data=data)
 
-    def _evaluate_action(self, action: Action, env: Environment, variables: Dict[str, Any]) -> Union[Action, Intent]:
+    def _evaluate_action(
+        self, action: Action, env: Environment, variables: Dict[str, Any]
+    ) -> Union[Action, Intent]:
         action_str = self._render_if_template(action.action, env, variables)
-        
+
         target = None
         if action.target:
-            entity_id = self._render_if_template(action.target.entity_id, env, variables)
+            entity_id = self._render_if_template(
+                action.target.entity_id, env, variables
+            )
             area_id = self._render_if_template(action.target.area_id, env, variables)
             floor_id = self._render_if_template(action.target.floor_id, env, variables)
             target = Target(entity_id=entity_id, area_id=area_id, floor_id=floor_id)
-        
+
         data = None
         if action.data:
             data = {}
             for key, value in action.data.items():
                 data[key] = self._render_if_template(value, env, variables)
-        
+
         return Action(action=action_str, target=target, data=data)
 
-    def _render_if_template(self, value: Any, env: Environment, variables: Dict[str, Any]) -> Any:
+    def _render_if_template(
+        self, value: Any, env: Environment, variables: Dict[str, Any]
+    ) -> Any:
         if isinstance(value, str):
             if _TEMPLATE_PATTERN.search(value):
                 template = env.from_string(value)
@@ -139,7 +157,7 @@ def action_from_dict(data: Dict[str, Any]) -> Union[Action, Intent]:
             name=data["intent"],
             data=data.get("data"),
         )
-    
+
     target = None
     if "target" in data and data["target"]:
         target_data = data["target"]

@@ -1,5 +1,6 @@
-from ..intent_handler import IntentHandler, HandleInput, HandleOutput
 from enum import IntFlag
+
+from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 
 
 class MediaPlayerEntityFeature(IntFlag):
@@ -36,7 +37,9 @@ class MediaPreviousHandler(IntentHandler):
 
     async def handle(self, input: HandleInput) -> HandleOutput:
         await input.hass.call_service(
-            "media_player", "media_previous_track", target={"entity_id": input.target_entity_ids}
+            "media_player",
+            "media_previous_track",
+            target={"entity_id": input.target_entity_ids},
         )
 
         return HandleOutput(success=True)
