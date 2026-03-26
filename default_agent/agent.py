@@ -214,6 +214,10 @@ async def async_converse(
     handle_output = await intent_handler.handle(handle_input)
     _LOGGER.debug(handle_output)
 
+    if not handle_output.success:
+        error_text = handle_output.response_text or _DEFAULT_ERROR_TEXT
+        return (False, error_text)
+
     if handle_output.response_vars:
         response_vars.update(handle_output.response_vars)
 

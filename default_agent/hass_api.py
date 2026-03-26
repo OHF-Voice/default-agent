@@ -309,7 +309,14 @@ class HomeAssistant:
         """Handle intent with REST API and return response."""
         headers = {"Authorization": f"Bearer {self.token}"}
 
-        _LOGGER.debug("Handling intent %s with: %s", intent_name, data)
+        _LOGGER.debug(
+            "Handling intent in Home Assistant %s with data=%s, assistant=%s, device_id=%s, satellite_id=%s",
+            intent_name,
+            data,
+            assistant,
+            device_id,
+            satellite_id,
+        )
 
         async with aiohttp.ClientSession() as session:
             web_response = await session.post(
