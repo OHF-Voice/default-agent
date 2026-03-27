@@ -14,14 +14,9 @@ class CancelAllTimersHandler(IntentHandler):
         if area_value is not None:
             data["area"] = area_value.value
 
-        await handle_input.hass.handle_intent(
-            self.intent_type,
-            handle_input.language,
-            data=data,
-            device_id=handle_input.device_id,
-            satellite_id=handle_input.satellite_id,
+        command_result = await handle_input.hass.run_command(
+            "intent/cancel_all_timers", data
         )
+        timer_ids = command_result.get("timer_ids", [])
 
-        # TODO: find out how many timers were canceled
-
-        return HandleOutput(success=True, response_vars={"canceled": 0})
+        return HandleOutput(success=True, response_vars={"canceled": len(timer_ids)})

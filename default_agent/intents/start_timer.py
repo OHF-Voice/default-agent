@@ -47,11 +47,11 @@ class StartTimerHandler(IntentHandler):
 
             data["conversation_command"] = conversation_command
 
-        await handle_input.hass.handle_intent(
-            self.intent_type,
-            handle_input.language,
-            data=data,
-            device_id=handle_input.device_id,
-            satellite_id=handle_input.satellite_id,
-        )
+        if handle_input.device_id:
+            data["device_id"] = handle_input.device_id
+
+        # TODO: conversation_agent_id
+
+        await handle_input.hass.run_command("intent/start_timer", data)
+
         return HandleOutput(success=True)

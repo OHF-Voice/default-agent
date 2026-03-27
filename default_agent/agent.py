@@ -12,7 +12,7 @@ from unicode_rbnf import FormatPurpose, RbnfEngine
 from default_agent.models import LanguageIntents, State
 
 from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
-from .hass_api import HomeAssistant, InfoForRecognition
+from .hass_api import HomeAssistant, InfoForRecognition, HomeAssistantError
 from .intent_handler import HandleInput, IntentHandler
 from .name_matcher import (
     MatchFailedReason,
@@ -52,8 +52,11 @@ async def async_converse(
     # websocket API.
     # This will be slower with many exposed entities, but this agent is intended
     # to run in a Home Assistant app/add-on with virtually no latency.
-    _LOGGER.debug("Loading entities from Home Assistant")
-    hass_info = await hass.get_info(device_id=device_id, satellite_id=satellite_id)
+    try:
+        _LOGGER.debug("Loading entities from Home Assistant")
+        hass_info = await hass.get_info(device_id=device_id, satellite_id=satellite_id)
+    except HomeAssistantError as err:
+        return (False, str(err))
 
     # Build intent context
     intent_context: Dict[str, Any] = {}
@@ -210,9 +213,12 @@ async def async_converse(
         match_preferences=match_preferences,
     )
 
-    _LOGGER.debug("Handling intent %s with handler: %s", intent_name, intent_handler)
-    handle_output = await intent_handler.handle(handle_input)
-    _LOGGER.debug(handle_output)
+    try:
+        _LOGGER.debug("Handling intent %s with handler: %s", intent_name, intent_handler)
+        handle_output = await intent_handler.handle(handle_input)
+        _LOGGER.debug(handle_output)
+    except HomeAssistantError as err:
+        return (False, str(err))
 
     if not handle_output.success:
         error_text = handle_output.response_text or _DEFAULT_ERROR_TEXT

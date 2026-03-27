@@ -32,12 +32,6 @@ class DecreaseTimerHandler(IntentHandler):
         if seconds_value is not None:
             data["seconds"] = int(seconds_value.value)
 
-        await handle_input.hass.handle_intent(
-            self.intent_type,
-            handle_input.language,
-            data=data,
-            device_id=handle_input.device_id,
-            satellite_id=handle_input.satellite_id,
-        )
+        await handle_input.hass.run_command("intent/decrease_timer", data)
 
         return HandleOutput(success=True)

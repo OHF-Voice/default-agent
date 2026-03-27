@@ -387,3 +387,49 @@ class HomeAssistant:
                 msg = await websocket.receive_json()
                 if not msg["success"]:
                     raise HomeAssistantError(msg["error"]["message"])
+
+    async def run_command(
+        self, command_type: str, command_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        current_id = 0
+
+        if command_data is None:
+            command_data = {}
+
+        def next_id() -> int:
+            nonlocal current_id
+            current_id += 1
+            return current_id
+
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                self.websocket_api_url, max_msg_size=0
+            ) as websocket:
+                # Authenticate
+                msg = await websocket.receive_json()
+                assert msg["type"] == "auth_required", msg
+
+                await websocket.send_json(
+                    {
+                        "type": "auth",
+                        "access_token": self.token,
+                    },
+                )
+
+                msg = await websocket.receive_json()
+                assert msg["type"] == "auth_ok", msg
+
+                _LOGGER.debug(
+                    "Running command %s with data=%s", command_type, command_data
+                )
+
+                await websocket.send_json(
+                    {"id": next_id(), "type": command_type, **command_data},
+                )
+                msg = await websocket.receive_json()
+                if not msg["success"]:
+                    raise HomeAssistantError(msg["error"]["message"])
+
+                _LOGGER.debug("Response for command %s: %s", command_type, msg)
+
+                return msg["result"]

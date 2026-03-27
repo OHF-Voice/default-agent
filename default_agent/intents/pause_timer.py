@@ -3,8 +3,8 @@ from typing import Any, Dict
 from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 
 
-class CancelTimerHandler(IntentHandler):
-    intent_type = "HassCancelTimer"
+class PauseTimerHandler(IntentHandler):
+    intent_type = "HassPauseTimer"
     match_targets = False
 
     async def handle(self, handle_input: HandleInput) -> HandleOutput:
@@ -23,6 +23,6 @@ class CancelTimerHandler(IntentHandler):
         if name_value is not None:
             data["name"] = name_value.value
 
-        await handle_input.hass.run_command("intent/cancel_timer", data)
+        await handle_input.hass.run_command("intent/pause_timer", data)
 
         return HandleOutput(success=True)

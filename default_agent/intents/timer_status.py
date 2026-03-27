@@ -31,6 +31,8 @@ class TimerStatusHandler(IntentHandler):
             satellite_id=handle_input.satellite_id,
         )
 
-        # TODO: get timers
+        command_response = await handle_input.hass.run_command(
+            "intent/timer_status", data
+        )
 
-        return HandleOutput(success=True)
+        return HandleOutput(success=True, response_vars=command_response)
