@@ -1,6 +1,6 @@
 """From Home Assistant."""
 
-from .const import RGBColor, COLORS
+from .const import COLORS, RGBColor
 
 
 def color_name_to_rgb(color_name: str) -> RGBColor:

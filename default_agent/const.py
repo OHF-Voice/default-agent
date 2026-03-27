@@ -1,6 +1,5 @@
 from enum import IntFlag
-from typing import Final
-from typing import NamedTuple
+from typing import Final, NamedTuple
 
 SLOT_NAME: Final = "name"
 SLOT_AREA: Final = "area"

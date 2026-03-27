@@ -1,5 +1,3 @@
-from enum import IntFlag
-
 from ..const import MediaPlayerEntityFeature
 from ..intent_handler import HandleInput, HandleOutput, IntentHandler
 

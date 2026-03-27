@@ -6,6 +6,6 @@ import pytest
 @pytest.mark.asyncio
 async def test_start_timer(async_converse, hass):
     """Test HassStartTimer intent."""
-    success, response = await async_converse("start a timer")
+    success, response = await async_converse("start a timer for 5 minutes")
     assert success, "Intent recognition failed"
-    assert response == ""
+    assert response == "Timer started"

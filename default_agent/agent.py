@@ -12,7 +12,7 @@ from unicode_rbnf import FormatPurpose, RbnfEngine
 from default_agent.models import LanguageIntents, State
 
 from .const import SLOT_AREA, SLOT_DOMAIN, SLOT_FLOOR, SLOT_NAME
-from .hass_api import HomeAssistant, InfoForRecognition, HomeAssistantError
+from .hass_api import HomeAssistant, HomeAssistantError, InfoForRecognition
 from .intent_handler import HandleInput, IntentHandler
 from .name_matcher import (
     MatchFailedReason,
@@ -214,7 +214,9 @@ async def async_converse(
     )
 
     try:
-        _LOGGER.debug("Handling intent %s with handler: %s", intent_name, intent_handler)
+        _LOGGER.debug(
+            "Handling intent %s with handler: %s", intent_name, intent_handler
+        )
         handle_output = await intent_handler.handle(handle_input)
         _LOGGER.debug(handle_output)
     except HomeAssistantError as err:
@@ -266,6 +268,11 @@ def render_response(
     slots: Dict[str, Any] = {e.name: e.value for e in intent_result.entities_list}
     if response_vars:
         slots.update(response_vars)
+
+    # Convert floats that can be truncated to ints without loss of information
+    for key, value in list(slots.items()):
+        if isinstance(value, float) and value.is_integer():
+            slots[key] = int(value)
 
     # Patch area name for responses.
     # We use area_id in the intent handlers for Home Assistant service calls,

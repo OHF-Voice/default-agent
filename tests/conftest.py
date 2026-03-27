@@ -8,15 +8,15 @@ import pytest
 from hassil import SlotList, TextSlotList
 
 from default_agent.agent import async_converse as agent_async_converse
-from default_agent.hass_api import InfoForRecognition
-from default_agent.intents_loader import IntentsLoader
-from default_agent.models import Area, Entity, Floor, LanguageIntents, State
 from default_agent.const import (
     ClimateEntityFeature,
     FanEntityFeature,
     MediaPlayerEntityFeature,
     VacuumEntityFeature,
 )
+from default_agent.hass_api import InfoForRecognition
+from default_agent.intents_loader import IntentsLoader
+from default_agent.models import Area, Entity, Floor, LanguageIntents, State
 
 TEST_DATETIME = datetime(year=2013, month=9, day=17, hour=1, minute=2)
 
