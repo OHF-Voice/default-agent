@@ -157,7 +157,6 @@ async def async_converse(
                     match_constraints.states = required_states
 
         # Area/floor preferences (based on where voice satellite is located)
-        match_preferences: Optional[MatchTargetsPreferences] = None
         if hass_info.preferred_area_id or hass_info.preferred_floor_id:
             match_preferences = MatchTargetsPreferences(
                 area_id=hass_info.preferred_area_id,
