@@ -7,6 +7,8 @@ on:
     branches: ["main"]
     tags: ["v*"]
 
+  workflow_dispatch:
+
 permissions:
   contents: write
 
@@ -38,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download built artifacts
         uses: actions/download-artifact@v4
         with:
