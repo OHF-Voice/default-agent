@@ -35,8 +35,8 @@ This project replicates the behavior of the default Assist agent in Home Assista
 1. Fetches information about [exposed entities][], areas, and floors from Home Assistant
 2. Finds the best intent match for the command text using [hassil][]
     - Command sentences come from the [home-assistant-intents][] package, [custom sentences](#custom-sentences), or a [development version of the intents repository](#intents-development)
-3. Matches names with entities/areas/floors in [`async_match_targets`](default-agent/default_agent/name_matcher.py)
-4. Locates an [intent handler](default-agent/default_agent/intents) for the matched intent
+3. Matches names with entities/areas/floors in [`async_match_targets`](default_agent/name_matcher.py)
+4. Locates an [intent handler](default_agent/intents) for the matched intent
 5. Executes the appropriate [actions][] in the intent handler
 6. Returns a response to the user
 
