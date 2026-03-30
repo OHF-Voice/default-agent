@@ -7,13 +7,25 @@ An external replacement for the default [conversation][] agent in Home Assistant
 
 ## Usage
 
-Install with:
+Run with Docker:
+
+``` sh
+docker run -it \
+    -p 10500:10500 \
+    -v /etc/localtime:/etc/localtime:ro \
+    -v /etc/timezone:/etc/timezone:ro \
+    'ghcr.io/ohf-voice/default-agent' \
+    --hass-api 'http://homeassistant.local:8123/api' \
+    --hass-token '<long-lived HA access token>'
+```
+
+Or manually install with:
 
 ``` python
 pip install 'default-agent@https://github.com/OHF-Voice/default-agent/archive/refs/heads/main.tar.gz'
 ```
 
-Run with:
+and then run with:
 
 ``` sh
 python -m default_agent \
