@@ -3,7 +3,7 @@
 
 # Default Agent
 
-An external replacement for the default [conversation](https://www.home-assistant.io/integrations/conversation/) agent in Home Assistant.
+An external replacement for the default [conversation][] agent in Home Assistant.
 
 ## Usage
 
@@ -28,22 +28,57 @@ Create a voice assistant pipeline with the discovered conversation agent, and en
 
 Add `--debug` for more logging.
 
+## How it Works
+
+This project replicates the behavior of the default Assist agent in Home Assistant. When a new command comes in, this agent:
+
+1. Fetches information about [exposed entities][], areas, and floors from Home Assistant
+2. Finds the best intent match for the command text using [hassil][]
+    - Command sentences come from the [home-assistant-intents][] package, [custom sentences](#custom-sentences), or a [development version of the intents repository](#intents-development)
+3. Matches names with entities/areas/floors in [`async_match_targets`](default-agent/name_matcher.py)
+4. Locates an [intent handler](default-agent/intents) for the matched intent
+5. Executes the appropriate [actions][] in the intent handler
+6. Returns a response to the user
+
 ## Timers
 
-For timers to work, you will need to install a [HACS integration](https://github.com/synesthesiam/mike-voice-hacs) that adds the appropriate websocket commands.
-
-## Intents Development
-
-You can work on a development version of the [intents](https://github.com/OHF-Voice/intents) repo by passing `--intents-repo /path/to/intents` to the server. This will load intents from the repo instead of using the built-in `home-assistant-intents` package.
-
+For timers to work, you will need to install a [HACS integration][mike-voice-hacs] that adds the appropriate websocket commands.
 
 ## Custom Sentences
 
-Just like in Home Assistant, [custom sentences](https://www.home-assistant.io/voice_control/custom_sentences_yaml#setting-up-sentences-in-the-config-directory) can be used by passing `--custom-sentences /path/to/custom_sentences` to the server. This should contain `<language>/<sentences>.yaml` files, such as `en/my_sentences.yaml`.
+Just like in Home Assistant, [custom sentences][] can be used by passing `--custom-sentences /path/to/custom_sentences` to the server. This should contain `<language>/<sentences>.yaml` files, such as `en/my_sentences.yaml`.
 
 If you just want to use custom sentences, the `--no-builtin-intents` option will disable loading the built-in intents.
+
+### Custom Responses
+
+Responses can also be overridden in a custom sentences file. For example, adding this YAML to a file like `en/my_sentences.yaml` will override the response for when lights are turned on in a specific area:
+
+``` yaml
+language: en
+responses:
+  intents:
+    HassTurnOn:
+      lights_area: "Turn on the lights in the {{ slots.area }}"
+```
+
+See the `responses` directory of the [intents][] repository for a list of available responses.
+
+## Intents Development
+
+You can work on a development version of the [intents][] repo by passing `--intents-repo /path/to/intents` to the server. This will load intents from the repo instead of using the built-in `home-assistant-intents` package.
 
 ## Disabling Intents
 
 You may disable specific intents by using `--disable-intent <intent>`. These intents will not be loaded (either from built-in intents or your custom sentences), and therefore cannot be matched.
 
+
+<!-- Links -->
+[hassil]: https://github.com/home-assistant/hassil
+[intents]: https://github.com/OHF-Voice/intents
+[custom sentences]: https://www.home-assistant.io/voice_control/custom_sentences_yaml#setting-up-sentences-in-the-config-directory
+[mike-voice-hacs]: https://github.com/synesthesiam/mike-voice-hacs
+[conversation]: https://www.home-assistant.io/integrations/conversation
+[exposed entities]: https://www.home-assistant.io/voice_control/voice_remote_expose_devices
+[actions]: https://www.home-assistant.io/docs/scripts/perform-actions
+[home-assistant-intents](https://pypi.org/project/home-assistant-intents)
