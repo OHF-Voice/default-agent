@@ -54,7 +54,7 @@ zip-safe  = true
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["default_agent"]
+include = ["default_agent*"]
 exclude = ["tests", "tests.*"]
 
 

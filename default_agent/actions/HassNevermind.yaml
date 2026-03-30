@@ -1,5 +1,0 @@
----
-HassNevermind:
-  match_targets: false
-  actions: []  # no actions
-  slots: {}  # no response
