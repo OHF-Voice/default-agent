@@ -157,6 +157,7 @@ def hass_info_fixture() -> InfoForRecognition:
         entities={e.entity_id: e for e in entities},
         areas={a.area_id: a for a in areas},
         floors={f.floor_id: f for f in floors},
+        satellite_devices={},
     )
 
 

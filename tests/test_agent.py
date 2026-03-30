@@ -35,6 +35,7 @@ def test_num_to_words(num: int, format_type: str, expected: str) -> None:
         entities={},
         areas={},
         floors={},
+        satellite_devices={},
     )
 
     template = f"{{{{ num_to_words({num}, '{format_type}') }}}}"

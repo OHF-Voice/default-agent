@@ -58,6 +58,11 @@ async def async_converse(
     except HomeAssistantError as err:
         return (False, str(err))
 
+    if satellite_id and (not device_id):
+        # Try to get device id for the satellite if it's missing.
+        # This is required for timers to funtion.
+        device_id = hass_info.satellite_devices.get(satellite_id)
+
     # Build intent context
     intent_context: Dict[str, Any] = {}
     if hass_info.preferred_area_id and hass_info.preferred_area_name:

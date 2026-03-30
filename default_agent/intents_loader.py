@@ -116,6 +116,9 @@ class IntentsLoader:
 
         # Custom sentences
         for sentences_dir in self.custom_sentences_dirs:
+            if not sentences_dir.is_dir():
+                continue
+
             for sentences_lang_dir in sentences_dir.iterdir():
                 if not sentences_lang_dir.is_dir():
                     continue
@@ -190,6 +193,9 @@ class IntentsLoader:
 
         # Get supported languages from custom sentences
         for sentences_dir in self.custom_sentences_dirs:
+            if not sentences_dir.is_dir():
+                continue
+
             _LOGGER.debug("Scanning directory for languages: %s", sentences_dir)
             for lang_dir in sentences_dir.iterdir():
                 if not lang_dir.is_dir():

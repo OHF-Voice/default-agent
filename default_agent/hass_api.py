@@ -30,6 +30,7 @@ class InfoForRecognition:
     entities: Dict[str, Entity]
     areas: Dict[str, Area]
     floors: Dict[str, Floor]
+    satellite_devices: Dict[str, str]
 
 
 class HomeAssistant:
@@ -102,6 +103,7 @@ class HomeAssistant:
                     if exposed_info.get("conversation"):
                         exposed_entity_ids.add(entity_id)
 
+                satellite_ids = set()
                 await websocket.send_json(
                     {
                         "id": next_id(),
@@ -112,6 +114,10 @@ class HomeAssistant:
                 assert msg["success"], msg
                 for state_data in msg["result"]:
                     entity_id = state_data["entity_id"]
+                    domain = entity_id.split(".", maxsplit=1)[0]
+                    if domain == "assist_satellite":
+                        satellite_ids.add(entity_id)
+
                     if entity_id not in exposed_entity_ids:
                         continue
 
@@ -277,6 +283,24 @@ class HomeAssistant:
                         preferred_area_name = preferred_area_info.name
                         preferred_floor_id = preferred_area_info.floor_id
 
+                # Get satellite devices
+                satellite_devices: Dict[str, str] = {}
+                if satellite_ids:
+                    await websocket.send_json(
+                        {
+                            "id": next_id(),
+                            "type": "config/entity_registry/get_entries",
+                            "entity_ids": list(satellite_ids),
+                        }
+                    )
+
+                    msg = await websocket.receive_json()
+                    assert msg["success"], msg
+                    for entity_id, entity_info in msg["result"].items():
+                        device_id = entity_info.get("device_id")
+                        if device_id:
+                            satellite_devices[entity_id] = device_id
+
         return InfoForRecognition(
             slot_lists={
                 SLOT_NAME: name_list,
@@ -294,6 +318,7 @@ class HomeAssistant:
             entities=entities,
             areas=areas,
             floors=floors,
+            satellite_devices=satellite_devices,
         )
 
     async def handle_intent(
