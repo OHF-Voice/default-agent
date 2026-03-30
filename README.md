@@ -72,6 +72,20 @@ You can work on a development version of the [intents][] repo by passing `--inte
 
 You may disable specific intents by using `--disable-intent <intent>`. These intents will not be loaded (either from built-in intents or your custom sentences), and therefore cannot be matched.
 
+## Future Plans
+
+Ideas for the future of this project:
+
+- A web interface that allows users to:
+    - Test and debug sentences and intent handlers
+    - Enable/disable intents (per area or satellite?)
+    - Enable/disable specific intent [slot combinations][]. For example, users could allow the lights to be turned on/off in the current area, but not other areas by name.
+- The addition of fuzzy command matching via [sentence transformers][]
+- Make entity exposure more fine-grained, so some entities are only exposed to specific satellites
+- Add both long and short responses, and allow users to configure which are used and when
+- Allow custom intents that can use parts of Home Assistant's [script syntax][] to execute their actions (no Python needed)
+- Make name matching more customizable. For example, having "turn on kitchen lights" match "turn on {area} lights" before "turn on {name}"
+
 
 <!-- Links -->
 [hassil]: https://github.com/home-assistant/hassil
@@ -82,3 +96,6 @@ You may disable specific intents by using `--disable-intent <intent>`. These int
 [exposed entities]: https://www.home-assistant.io/voice_control/voice_remote_expose_devices
 [actions]: https://www.home-assistant.io/docs/scripts/perform-actions
 [home-assistant-intents]: https://pypi.org/project/home-assistant-intents
+[slot combinations]: https://github.com/OHF-Voice/intents/blob/main/docs/slot_combinations.md
+[sentence transformers]: https://github.com/OHF-Voice/sentence-transformers-agent
+[script syntax]: https://www.home-assistant.io/docs/scripts
