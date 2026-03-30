@@ -1,15 +1,5 @@
-from enum import IntFlag
-
+from ..const import FanEntityFeature
 from ..intent_handler import HandleInput, HandleOutput, IntentHandler
-
-
-class FanEntityFeature(IntFlag):
-    SET_SPEED = 1
-    OSCILLATE = 2
-    DIRECTION = 4
-    PRESET_MODE = 8
-    TURN_OFF = 16
-    TURN_ON = 32
 
 
 class FanSetSpeedHandler(IntentHandler):

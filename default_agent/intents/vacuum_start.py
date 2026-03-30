@@ -1,24 +1,5 @@
-from enum import IntFlag
-
+from ..const import VacuumEntityFeature
 from ..intent_handler import HandleInput, HandleOutput, IntentHandler
-
-
-class VacuumEntityFeature(IntFlag):
-    TURN_ON = 1
-    TURN_OFF = 2
-    PAUSE = 4
-    STOP = 8
-    RETURN_HOME = 16
-    FAN_SPEED = 32
-    BATTERY = 64
-    STATUS = 128
-    SEND_COMMAND = 256
-    LOCATE = 512
-    CLEAN_SPOT = 1024
-    MAP = 2048
-    STATE = 4096
-    START = 8192
-    CLEAN_AREA = 16384
 
 
 class VacuumStartHandler(IntentHandler):

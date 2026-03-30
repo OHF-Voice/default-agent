@@ -1,3 +1,5 @@
+"""Base classes for intent handlers."""
+
 import importlib
 import inspect
 import logging
@@ -24,6 +26,8 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class HandleInput:
+    """Input to intent handlers."""
+
     text: str
     lang_intents: LanguageIntents
     hass: HomeAssistant
@@ -49,7 +53,11 @@ class HandleInput:
 
 @dataclass
 class HandleOutput:
+    """Output from intent handlers."""
+
     success: bool
+    """True if intent was handled successfully (not an error)."""
+
     response_vars: Optional[Dict[str, Any]] = None
     response_text: Optional[str] = None
     matched_states: Optional[List[State]] = None
@@ -57,22 +65,40 @@ class HandleOutput:
 
 
 class IntentHandler:
+    """Base class for intent handlers."""
+
     intent_type: ClassVar[str]
+    """Intent type/name (e.g., HassTurnOn)."""
+
     match_targets: ClassVar[bool]
+    """True if intent expects states matched by constraints like name/area/etc."""
+
     required_states: Optional[Union[str, Collection[str]]] = None
+    """State(s) that matching targets must be in (e.g., 'playing')."""
+
     required_features: Optional[int] = None
+    """Features that matching targets must support (e.g., PAUSE for media players)."""
+
     inferred_domain: Optional[Union[str, Collection[str]]] = None
+    """Domain of targeted entities that can be inferred from the intent itself.
+
+    For example, HassMediaPause only affects `media_player` entities.
+    """
 
     def __init_subclass__(cls) -> None:
         super().__init_subclass__()
 
+        # Required to set these when deriving from the base class
         for attr_name in ("intent_type", "match_targets"):
             if not hasattr(cls, attr_name):
                 raise TypeError(f"{cls.__name__} must define {attr_name}")
 
     @abstractmethod
     async def handle(self, handle_input: HandleInput) -> HandleOutput:
-        pass
+        """Handle the intent.
+
+        This usually involves using handle_input.hass to make calls out to Home Assistant.
+        """
 
 
 def find_intent_handlers(

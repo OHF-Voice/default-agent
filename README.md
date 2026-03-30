@@ -30,6 +30,10 @@ Create a voice assistant pipeline with the discovered conversation agent, and en
 
 Add `--debug` for more logging.
 
+## Timers
+
+For timers to work, you will need to install a [HACS integration](https://github.com/synesthesiam/mike-voice-hacs) that adds the appropriate websocket commands.
+
 ## Intents Development
 
 You can work on a development version of the [intents](https://github.com/OHF-Voice/intents) repo by passing `--intents-repo /path/to/intents` to the server. This will load intents from the repo instead of using the built-in `home-assistant-intents` package.
