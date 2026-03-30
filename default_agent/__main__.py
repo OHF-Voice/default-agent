@@ -11,7 +11,7 @@ from wyoming.asr import Transcript
 from wyoming.event import Event
 from wyoming.handle import Handled, NotHandled
 from wyoming.info import Attribution, Describe, HandleModel, HandleProgram, Info
-from wyoming.server import AsyncEventHandler, AsyncServer
+from wyoming.server import AsyncEventHandler, AsyncServer, AsyncTcpServer
 
 from .agent import async_converse
 from .hass_api import HomeAssistant
@@ -33,7 +33,15 @@ async def main() -> None:
         default="http://homeassistant.local:8123/api",
         help="URL of Home Assistant API",
     )
+    #
     parser.add_argument("--uri", default="stdio://", help="unix:// or tcp://")
+    parser.add_argument(
+        "--zeroconf",
+        nargs="?",
+        const="default-agent",
+        help="Enable discovery over zeroconf with optional name (default: default-agent)",
+    )
+    #
     parser.add_argument(
         "--custom-sentences",
         action="append",
@@ -80,6 +88,19 @@ async def main() -> None:
     )
 
     server = AsyncServer.from_uri(args.uri)
+    if args.zeroconf:
+        if not isinstance(server, AsyncTcpServer):
+            raise ValueError("Zeroconf requires tcp:// uri")
+
+        from wyoming.zeroconf import HomeAssistantZeroconf
+
+        tcp_server: AsyncTcpServer = server
+        hass_zeroconf = HomeAssistantZeroconf(
+            name=args.zeroconf, port=tcp_server.port, host=tcp_server.host
+        )
+        await hass_zeroconf.register_server()
+        _LOGGER.debug("Zeroconf discovery enabled")
+
     _LOGGER.info("Ready")
     await server.run(partial(EventHandler, hass, loader, args))
 

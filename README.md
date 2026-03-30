@@ -7,8 +7,6 @@ An external replacement for the default [conversation](https://www.home-assistan
 
 ## Usage
 
-This depends on a development version of Home Assistant, including a yet-to-be-merged [PR](https://github.com/home-assistant/core/pull/164765).
-
 Install with:
 
 ``` python
