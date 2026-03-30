@@ -1,0 +1,5 @@
+*
+!pyproject.toml
+!LICENSE.md
+!default_agent/*.py
+!default_agent/intents/*.py
