@@ -3,6 +3,7 @@
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Set
+from urllib.parse import urlparse, urlunparse
 
 import aiohttp
 from hassil.expression import TextChunk
@@ -39,14 +40,28 @@ class HomeAssistant:
     def __init__(
         self,
         token: str,
-        api_url: str = "ws://homeassistant.local:8123/api/websocket",
+        api_url: str = "http://homeassistant.local:8123/api",
     ) -> None:
         self.token = token
-        if api_url.endswith("/"):
-            api_url = api_url[:-1]
+        self.api_url = api_url.rstrip("/")
 
-        self.api_url = api_url
-        self.websocket_api_url = f"{api_url}/websocket"
+        # Get websocket API URL
+        parsed = urlparse(self.api_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+
+        # Convert scheme
+        scheme = "wss" if parsed.scheme == "https" else "ws"
+        path = f"{parsed.path}/websocket"
+        self.websocket_api_url = urlunparse(
+            parsed._replace(
+                scheme=scheme,
+                path=path,
+                params="",
+                query="",
+                fragment="",
+            )
+        )
 
     async def get_info(
         self, device_id: Optional[str] = None, satellite_id: Optional[str] = None
@@ -300,6 +315,13 @@ class HomeAssistant:
                         device_id = entity_info.get("device_id")
                         if device_id:
                             satellite_devices[entity_id] = device_id
+
+        _LOGGER.debug(
+            "Loaded %s entities, %s area(s), %s floor(s)",
+            len(entities),
+            len(areas),
+            len(floors),
+        )
 
         return InfoForRecognition(
             slot_lists={
