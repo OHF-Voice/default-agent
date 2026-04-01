@@ -352,7 +352,7 @@ def render_response(
     response_str = _ENV.from_string(response_template).render(variables)
 
     # Normalize whitespace
-    response_str = " ".join(response_str.split()).strip()
+    response_str = " ".join(str(response_str).split()).strip()
 
     return response_str
 
